@@ -26,3 +26,6 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 - Tventana [min]: (Tamaño en minutos de la ventana deslizante T)
 - n: Orden para la regresión polinómica
 - Granularidad_deteccion: es el alcance del sistema, que se debe conocer para el dominio en el que realizar la regresión polinómica
+
+Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt.
+
