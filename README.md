@@ -8,22 +8,7 @@ Después, se deberá llevar el Script process.sh al mismo directorio donde esté
 
 Una vez se dispone de las series temporales (.txt) de diferentes datos de calibración, se deberán organizar en directorios distintos, todos ellos dentro de una ruta concreta. Por ejemplo, en la ruta "X" deberán estar los directorios march_week3, march_week4, march_week5... Y cada uno deberá contener su correspondiente fichero BPSyPPS.txt. En esa misma ruta "X" deberá encontrarse el fichero Matlab para la obtención de los datos de entrenamiento para la red LSTM/Holt-Winter's.
 
-Este proceso se debe hacer para las siguientes semanas de tráfico, que son las que se han utilizado en el TFM (y, por tanto, las que se leen en el fichero de Matlab):
-march_week3
-march_week4
-march_week5
-
-april_week2
-april_week4
-
-may_week1
-may_week3
-
-june_week1
-june_week2
-june_week3
-
-july_week1
+Este proceso se debe hacer para las siguientes semanas de tráfico, que son las que se han utilizado en el TFM (y, por tanto, las que se leen en el fichero de Matlab): march_week3, march_week4, march_week5, april_week2, april_week4, may_week1, may_week3, june_week1, june_week2, june_week3, july_week1.
 
 2. Código Matlab para la obtención de la Base de Datos con las dinámicas de la tendencia (fichero TrendDynamics.m): Este fichero tomará todas las series temporales y las organizará semanalmente (de Lunes a Domingo). A continuación, por cada serie temporal, irá deslizando una ventana y, por cada ventana, obtendrá los parámetros theta de la regresión polinómica y los parámetros alpha-estable de cada ventana tras restar a los datos dicha tendencia. El resultado son dos ficheros: TPX_Y.txt (Theta Parameters X = Tamaño de ventana deslizante usado Y = orden polinómico usado) y APX_Y.txt (Alpha Parameters; X e Y significan lo mismo que para TPX_Y.txt). Estos ficheros almacenan la información con el siguiente formato:
 
