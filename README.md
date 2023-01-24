@@ -24,7 +24,7 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 - computeParams (0 o 1) para decidir si leer los ficheros TP y AP de un .txt ya existente (computeParams = 0) o bien computarlos y escribirlos (computeParams = 1)
 - TPfilename y APfilename: Nombres de los ficheros TP y AP de los que leer los datos.
 - Tventana [min]: (Tamaño en minutos de la ventana deslizante T)
-- n: Orden para la regresión polinómica
+- n: Grado para la regresión polinómica
 - Granularidad_deteccion: es el alcance del sistema, que se debe conocer para el dominio en el que realizar la regresión polinómica
 
 Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt.
