@@ -13,12 +13,12 @@ Este proceso se debe hacer para las siguientes semanas de tráfico, que son las 
 2. Código Matlab para la obtención de la Base de Datos con las dinámicas de la tendencia (fichero TrendDynamics.m): Este fichero tomará todas las series temporales y las organizará semanalmente (de Lunes a Domingo). A continuación, por cada serie temporal, irá deslizando una ventana y, por cada ventana, obtendrá los parámetros theta de la regresión polinómica y los parámetros alpha-estable de cada ventana tras restar a los datos dicha tendencia. El resultado son dos ficheros: TPX_Y.txt (Theta Parameters X = Tamaño de ventana deslizante usado Y = orden polinómico usado) y APX_Y.txt (Alpha Parameters; X e Y significan lo mismo que para TPX_Y.txt). Estos ficheros almacenan la información con el siguiente formato:
 
 Parámetros theta:
-   [theta0 theta1 theta2...] semana 1 ventana 1 | [theta0 theta1 theta2...] semana 2 ventana 1 | ... | [theta0 theta1 theta2...] semana M ventana 1
-   [theta0 theta1 theta2...] semana 1 ventana 2 | [theta0 theta1 theta2...] semana 2 ventana 2 | ... | [theta0 theta1 theta2...] semana M ventana 2
-   [theta0 theta1 theta2...] semana 1 ventana 3 | [theta0 theta1 theta2...] semana 2 ventana 3 | ... | [theta0 theta1 theta2...] semana M ventana 3
-   ...
-   ...
-   [theta0 theta1 theta2...] semana 1 ventana N | [theta0 theta1 theta2...] semana 2 ventana N | ... | [theta0 theta1 theta2...] semana M ventana N
+- [theta0 theta1 theta2...] semana 1 ventana 1 | [theta0 theta1 theta2...] semana 2 ventana 1 | ... | [theta0 theta1 theta2...] semana M ventana 1
+- [theta0 theta1 theta2...] semana 1 ventana 2 | [theta0 theta1 theta2...] semana 2 ventana 2 | ... | [theta0 theta1 theta2...] semana M ventana 2
+- [theta0 theta1 theta2...] semana 1 ventana 3 | [theta0 theta1 theta2...] semana 2 ventana 3 | ... | [theta0 theta1 theta2...] semana M ventana 3
+- ...
+- ...
+- [theta0 theta1 theta2...] semana 1 ventana N | [theta0 theta1 theta2...] semana 2 ventana N | ... | [theta0 theta1 theta2...] semana M ventana N
    
 Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 - computeParams (0 o 1) para decidir si leer los ficheros TP y AP de un .txt ya existente (computeParams = 0) o bien computarlos y escribirlos (computeParams = 1)
