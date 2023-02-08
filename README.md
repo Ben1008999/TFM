@@ -29,3 +29,4 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 
 Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt.
 
+3. 
