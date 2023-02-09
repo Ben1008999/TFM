@@ -41,28 +41,28 @@ Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicion
 - velocity: indica si se desea trabajar con la derivada de las series temporales theta_i para la predicción (FUNCIÓN NO IMPLEMENTADA: NO USAR). El código no soporta esta función actualmente, aunque se han realizado pruebas intermedias). Poner a 0.
 - filename_thetaParams: nombre del fichero en el que se encuentran los parámetros theta (TPX_Y.txt).
 - filename_network_traffic_series: nombre del fichero en el que se encuentran las series temporales organizadas semanalmente (All_series.txt)
-- semana: número de semana que se desea utilizar como test. En las pruebas realizadas para el Trabajo, cada índice representa lo siguiente:
+- semana: número o índice de semana que se desea utilizar como test (se usa para acceder a esa semana en la matriz con el agregado del tráfico semanal). En las pruebas realizadas para el Trabajo, cada índice representa lo siguiente (no obstante, dependerá de qué semanas haya descargado el usuario):
 
-0 = march_week3
+semana 0 = march_week3
 
-1 = march_week4
+semana 1 = march_week4
 
-2 = march_week5
+semana 2 = march_week5
 
-3 = april_week2
+semana 3 = april_week2
 
-4 = april_week4
+semana 4 = april_week4
 
-5 = may_week1
+semana 5 = may_week1
 
-6 = may_week3
+semana 6 = may_week3
 
-7 = june_week1
+semana 7 = june_week1
 
-8 = june_week2
+semana 8 = june_week2
 
-9 = june_week3
+semana 9 = june_week3
 
-10 = july_week1
+semana 10 = july_week1
 
-
+- tiempo_final: último instante de tiempo (o segundo) incluido del que se conocen datos de la serie temporal theta_i para llevar a cabo la simulación de nuevos parámetros theta_i. Por ejemplo, si tiempo_final = 15901, quiere decir que se tomará la serie temporal con la evolución de los parámetros theta_i hasta el segundo 15901 incluido (en otras palabras, la última ventana conocida de la que se tienen datos con un sliding de 1s sería la 15901). Si por ejemplo tiempo_final = 1, quiere decir que el código asume que conoce la primera ventana (la 0, que va desde el Lunes [00:00:00] hasta el Lunes [00:00:00] + Tsventana -1) y la segunda (la 1, que va desde el [00:00:00] + Tsventana hasta el [00:00:00] + 2Tsventana-1 o, lo que es lo mismo, solo se tienen datos de los coeficientes theta de la ventana 0 (theta_i_0) y de la ventana 1 (theta_i_1)).
