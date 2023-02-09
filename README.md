@@ -30,3 +30,11 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicionalmente, se escribirá en un fichero "All_series.txt" todas las series temporales en forma de matriz (lo que sería la matriz 'agregado' en TrendDynamics.m) ordenadas semanalmente.
 
 3. Código Python para la programación de la red LSTM y para la predicción de la tendencia. Una vez se dispone de los ficheros de entrenamiento para la red LSTM (TPX_Y.txt) y de las propias series temprales All_series.txt, se puede ejecutar el código mainThreads_multistep.py para simular la predicción sobre una ventana de test. Los inputs del fichero son los siguientes:
+- Tsventana: tamaño de ventana en segundos que se usó para sacar los coeficientes y parámetros alpha-stable en TrendDynamics.m
+- n: grado de la regresión polinómica que se usó cuando se obtuvieron estos parámetros theta en TrendDynamics.m
+- timesteps_future: puntos futuros de la predicción de los parámetros theta_i (sería k_steps,future)
+- timesteps_future_recurrent: puntos futuros de la predicción de los parámetros theta_i cuando se realiza la predicción recurrente (por ejemplo, se pueden predecir los timesteps_future = 10 puntos futuros de 1, en 1, 2 en 2, de 5 en 5... De forma realimentada, usando cada predicción como input para la siguiente predicción. Por ejemplo, si se quieren predecir 10 puntos de 2 en 2, entonces timesteps_future_recurrent = 2).
+- Diezmado: período de muestreo (Delta) en segundos para realizar el diezmado de las series temporales theta_i
+- recurrent_forecast: Indica si se desea realizar la predicción de forma recurrente. 0: no se desea predicción recurrente. 1: se desea predicción recurrente
+normalization = 2; #0: MinMax. 1: tanh. 2: zscore
+CNN = 0; #1: CNN + LSTM. 0: LSTM simple
