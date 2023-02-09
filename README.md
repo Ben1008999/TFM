@@ -36,5 +36,9 @@ Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicion
 - timesteps_future_recurrent: puntos futuros de la predicción de los parámetros theta_i cuando se realiza la predicción recurrente (por ejemplo, se pueden predecir los timesteps_future = 10 puntos futuros de 1, en 1, 2 en 2, de 5 en 5... De forma realimentada, usando cada predicción como input para la siguiente predicción. Por ejemplo, si se quieren predecir 10 puntos de 2 en 2, entonces timesteps_future_recurrent = 2).
 - Diezmado: período de muestreo (Delta) en segundos para realizar el diezmado de las series temporales theta_i
 - recurrent_forecast: Indica si se desea realizar la predicción de forma recurrente. 0: no se desea predicción recurrente. 1: se desea predicción recurrente
-normalization = 2; #0: MinMax. 1: tanh. 2: zscore
-CNN = 0; #1: CNN + LSTM. 0: LSTM simple
+- normalization: tipo de normalización que se usará para la predicción de las series temporales theta_i. 0: MinMax. 1: tanh. 2: zscore
+- CNN: indica si se desea utilizar la LSTM con capa convolucional o no. 1: CNN + LSTM. 0: LSTM simple, sin capa convolucional.
+- velocity: indica si se desea trabajar con la derivada de las series temporales theta_i para la predicción (FUNCIÓN NO IMPLEMENTADA: NO USAR). El código no soporta esta función actualmente, aunque se han realizado pruebas intermedias). Poner a 0.
+- filename_thetaParams: nombre del fichero en el que se encuentran los parámetros theta (TPX_Y.txt).
+- filename_network_traffic_series: nombre del fichero en el que se encuentran las series temporales organizadas semanalmente (All_series.txt)
+- 
