@@ -44,17 +44,25 @@ Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicion
 - semana: número de semana que se desea utilizar como test. En las pruebas realizadas para el Trabajo, cada índice representa lo siguiente:
 
 0 = march_week3
+
 1 = march_week4
+
 2 = march_week5
 
 3 = april_week2
+
 4 = april_week4
 
 5 = may_week1
+
 6 = may_week3
 
 7 = june_week1
+
 8 = june_week2
+
 9 = june_week3
 
 10 = july_week1
+
+
