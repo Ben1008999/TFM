@@ -27,6 +27,6 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 - n: Grado para la regresión polinómica
 - Granularidad_deteccion: es el alcance del sistema, que se debe conocer para el dominio en el que realizar la regresión polinómica
 
-Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt.
+Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicionalmente, se escribirá en un fichero "All_series.txt" todas las series temporales en forma de matriz (lo que sería la matriz 'agregado' en TrendDynamics.m) ordenadas semanalmente.
 
-3. 
+3. Código Python para la programación de la red LSTM y para la predicción de la tendencia. Una vez se dispone de los ficheros de entrenamiento para la red LSTM (TPX_Y.txt) y de las propias series temprales All_series.txt, se puede ejecutar el código mainThreads_multistep.py para simular la predicción sobre una ventana de test. Los inputs del fichero son los siguientes:
