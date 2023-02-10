@@ -29,7 +29,7 @@ Por tanto, las variables de entrada del fichero TrendDynamics.m son:
 
 Las salidas del fichero TrendDynamics.m son los ficheros TP y APX_Y.txt. Adicionalmente, se escribirá en un fichero "All_series.txt" todas las series temporales en forma de matriz (lo que sería la matriz 'agregado' en TrendDynamics.m) ordenadas semanalmente.
 
-3. Código Python para la programación de la red LSTM y para la predicción de la tendencia. Una vez se dispone de los ficheros de entrenamiento para la red LSTM (TPX_Y.txt) y de las propias series temprales All_series.txt, se puede ejecutar el código mainThreads_multistep.py para simular la predicción sobre una ventana de test. Los inputs del fichero son los siguientes:
+3. Código Python para la programación de la red LSTM y para la predicción de la tendencia. El código desarrollado está diseñado para 8 redes LSTM (grado polinómico n = 7), pero se puede aplicar lo mismo para órdenes superiores o inferiores. Una vez se dispone de los ficheros de entrenamiento para la red LSTM (TPX_Y.txt) y de las propias series temprales All_series.txt, se puede ejecutar el código mainThreads_multistep.py para simular la predicción sobre una ventana de test. Los inputs del fichero son los siguientes:
 - Tsventana: tamaño de ventana en segundos que se usó para sacar los coeficientes y parámetros alpha-stable en TrendDynamics.m
 - n: grado de la regresión polinómica que se usó cuando se obtuvieron estos parámetros theta en TrendDynamics.m
 - timesteps_future: puntos futuros de la predicción de los parámetros theta_i (sería k_steps,future)
@@ -65,5 +65,24 @@ semana 9 = june_week3
 
 semana 10 = july_week1
 
-- tiempo_final: último instante de tiempo (o segundo) incluido del que se conocen datos de la serie temporal theta_i para llevar a cabo la simulación de nuevos parámetros theta_i. Por ejemplo, si tiempo_final = 15901, quiere decir que se tomará la serie temporal con la evolución de los parámetros theta_i hasta el segundo 15901 incluido (en otras palabras, la última ventana conocida de la que se tienen datos con un sliding de 1s sería la 15901). Si por ejemplo tiempo_final = 1, quiere decir que el código asume que conoce la primera ventana (la 0, que va desde el Lunes [00:00:00] hasta el Lunes [00:00:00] + Tsventana -1) y la segunda (la 1, que va desde el Lunes [00:00:00] + Tsventana +1s hasta el [00:00:00] + Tsventana o, lo que es lo mismo, solo se tienen datos de los coeficientes theta de la ventana 0 (theta_i_0) y de la ventana 1 (theta_i_1), es decir, solo se tienen 2 puntos en las series temporales theta_i para el entrenamiento).
-- 
+- tiempo_final: último instante de tiempo (o segundo) incluido del que se conocen datos de la serie temporal theta_i para llevar a cabo la simulación de nuevos parámetros theta_i. Por ejemplo, si tiempo_final = 15901, quiere decir que se tomará la serie temporal con la evolución de los parámetros theta_i hasta el segundo 15901 incluido (en otras palabras, la última ventana conocida de la que se tienen datos con un sliding de 1s sería la 15901). Si por ejemplo tiempo_final = 1, quiere decir que el código asume que conoce la primera ventana (la 0, que va desde el Lunes [00:00:00] hasta el Lunes [00:00:00] + Tsventana -1) y la segunda (la 1, que va desde el Lunes [00:00:00] + Tsventana +1s hasta el [00:00:00] + Tsventana o, lo que es lo mismo, solo se tienen datos de los coeficientes theta de esa ventana 0 (theta_i_0) y de esa ventana 1 (theta_i_1), es decir, solo se tienen 2 puntos en las series temporales theta_i para el entrenamiento).
+NOTA: El tiempo final de simulación podría no ser compatible con el diezmado. Si el diezmado es de 180s, quiere decir que las series temporales theta_i se muestrean cada 180s, lo que implica que solo se tienen los theta_i de la ventana 0 (Lunes [00:00:00] a Lunes [00:00:00] + Tsventana-1), de la ventana 180 (Lunes [00:00:00]+180 a Lunes [00:00:00] + Tsventana-1 + 180), de la 360 (Lunes [00:00:00]+360 a Lunes [00:00:00] + Tsventana-1 + 360) y así sucesivamente. Por tanto, por ejemplo, la ventana 145 no se podría simular; en cambio, el código arregla automáticamente el tiempo final para que sea múltiplo del diezmado mediante el siguiente trozo de código:
+
+final = round(tiempo_final/diezmado); #Punto final
+tiempo_final = final*diezmado;
+
+- time_past0: tiempo en segundos de memoria de la red LSTM. Por ejemplo, si la red LSTM tiene una memoria de 60 segundos, quiere decir que tomará en cuenta la evolución de las series theta_i en los 60s anteriores para obtener la predicción. Si se establece un diezmado de 2s en ese caso, entonces equivalentemente la red tomaría los 60/2 = 30 puntos anteriores para la predicción.
+- T_train0: tamaño en segundos de la ventana de entrenamiento. Si por ejemplo T_train0 = 540000 segundos y el diezmado es de 180s, entonces quiere decir que la ventana de entrenamiento tiene 540000/180 = 3000 puntos.
+- time_neighbour_points0: número de puntos vecinos para la convolución (en caso de usar capa CNN).
+- epoch: número de épocas de entrenamiento para las redes LSTM. Dado que cada serie theta_i podría requerir distinto entrenamiento, se puede configurar este valor por cada red LSTM en el cuarto argumento del siguiente trozo de código que refleja cada hilo de entrenamiento de cada LSTM:
+
+my_thread0 = threading.Thread(target=trainLSTM, args=(history_list, X0, y0, epoch, 0, in_seq0_test_norm, in_seq0_truth_norm, model0, 0))
+my_thread1 = threading.Thread(target=trainLSTM, args=(history_list, X1, y1, epoch, 1, in_seq1_test_norm, in_seq1_truth_norm, model1, 1))
+my_thread2 = threading.Thread(target=trainLSTM, args=(history_list, X2, y2, epoch, 0, in_seq2_test_norm, in_seq2_truth_norm, model2, 2))
+my_thread3 = threading.Thread(target=trainLSTM, args=(history_list, X3, y3, epoch, 0, in_seq3_test_norm, in_seq3_truth_norm, model3, 3))
+my_thread4 = threading.Thread(target=trainLSTM, args=(history_list, X4, y4, epoch, 0, in_seq4_test_norm, in_seq4_truth_norm, model4, 4))
+my_thread5 = threading.Thread(target=trainLSTM, args=(history_list, X5, y5, epoch, 0, in_seq5_test_norm, in_seq5_truth_norm, model5, 5))
+my_thread6 = threading.Thread(target=trainLSTM, args=(history_list, X6, y6, epoch, 0, in_seq6_test_norm, in_seq6_truth_norm, model6, 6))
+my_thread7 = threading.Thread(target=trainLSTM, args=(history_list, X7, y7, epoch, 0, in_seq7_test_norm, in_seq7_truth_norm, model7, 7))
+
+El quinto argumento se refiere a la verbosidad (0: si no se quiere mostrar la barra de progreso del entrenamiento, 1: en caso contrario). Se puede mostrar el progreso para cualquiera de las redes LSTM.
