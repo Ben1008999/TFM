@@ -77,12 +77,19 @@ tiempo_final = final*diezmado;
 - epoch: número de épocas de entrenamiento para las redes LSTM. Dado que cada serie theta_i podría requerir distinto entrenamiento, se puede configurar este valor por cada red LSTM en el cuarto argumento del siguiente trozo de código que refleja cada hilo de entrenamiento de cada LSTM:
 
 my_thread0 = threading.Thread(target=trainLSTM, args=(history_list, X0, y0, epoch, 0, in_seq0_test_norm, in_seq0_truth_norm, model0, 0))
+
 my_thread1 = threading.Thread(target=trainLSTM, args=(history_list, X1, y1, epoch, 1, in_seq1_test_norm, in_seq1_truth_norm, model1, 1))
+
 my_thread2 = threading.Thread(target=trainLSTM, args=(history_list, X2, y2, epoch, 0, in_seq2_test_norm, in_seq2_truth_norm, model2, 2))
+
 my_thread3 = threading.Thread(target=trainLSTM, args=(history_list, X3, y3, epoch, 0, in_seq3_test_norm, in_seq3_truth_norm, model3, 3))
+
 my_thread4 = threading.Thread(target=trainLSTM, args=(history_list, X4, y4, epoch, 0, in_seq4_test_norm, in_seq4_truth_norm, model4, 4))
+
 my_thread5 = threading.Thread(target=trainLSTM, args=(history_list, X5, y5, epoch, 0, in_seq5_test_norm, in_seq5_truth_norm, model5, 5))
+
 my_thread6 = threading.Thread(target=trainLSTM, args=(history_list, X6, y6, epoch, 0, in_seq6_test_norm, in_seq6_truth_norm, model6, 6))
+
 my_thread7 = threading.Thread(target=trainLSTM, args=(history_list, X7, y7, epoch, 0, in_seq7_test_norm, in_seq7_truth_norm, model7, 7))
 
 El quinto argumento se refiere a la verbosidad (0: si no se quiere mostrar la barra de progreso del entrenamiento, 1: en caso contrario). Se puede mostrar el progreso para cualquiera de las redes LSTM.
