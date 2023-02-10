@@ -86,3 +86,6 @@ my_thread6 = threading.Thread(target=trainLSTM, args=(history_list, X6, y6, epoc
 my_thread7 = threading.Thread(target=trainLSTM, args=(history_list, X7, y7, epoch, 0, in_seq7_test_norm, in_seq7_truth_norm, model7, 7))
 
 El quinto argumento se refiere a la verbosidad (0: si no se quiere mostrar la barra de progreso del entrenamiento, 1: en caso contrario). Se puede mostrar el progreso para cualquiera de las redes LSTM.
+
+
+NOTA: El código cuenta con algunas pruebas realizadas con PCA comentadas (para reducción de dimensionalidad en los coeficientes theta de los polinomios) y otros trozos de código necesarios para obtener Figuras intermedias para la memoria.
