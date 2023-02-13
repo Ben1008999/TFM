@@ -96,3 +96,6 @@ El quinto argumento se refiere a la verbosidad (0: si no se quiere mostrar la ba
 
 
 NOTA: El código cuenta con algunas pruebas realizadas con PCA comentadas (para reducción de dimensionalidad en los coeficientes theta de los polinomios) y otros trozos de código necesarios para obtener Figuras intermedias para la memoria.
+
+La salida del fichero Python con el entrenamiento puede ser importada en Matlab para ejecutar la etapa final: la detección y el cómputo del cociente de Funciones Características. Para ello, se deberá utilizar el fichero resultadosFinalesAlgortimo.m.
+Por otro lado, en este repositorio también se encuentra un Notebook de Jupyter con el código de prueba utilizado para el modelo Holt-Winters. Este código utiliza la Base de Datos TPX_Y.txt y "All_series.txt".
