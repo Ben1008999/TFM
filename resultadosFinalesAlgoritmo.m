@@ -341,19 +341,3 @@ FT_Suma = flip(ECFSuma_inv);
 fdpSuma = abs(ifft(fftshift(FT_Suma)));
 %Adecuar valores al dominio:
 fdpSuma = [fdpSuma(end-points_under_zero+1:end), fdpSuma(1:end-points_under_zero)];
-
-% En Matlab apenas hay funciones para deconvolucionar señales: mejor hacer
-% el cociente.
-% fdpAtaque = deconvwnr(fdpSuma, fdpNormal);
-% figure; plot(dominioFDP, fdpAtaque./stepFDP); hold on; plot(dominioFDP, pdf_alphaNormal);
-
-%Cambios que hacer en la memoria:
-%Re-explicar la idea de qué hacer con la tendencia predicha en la zona de
-%incertidumbre: ahora no se estacionariza por partes, sino que se concatena
-%la predicción en la zona conocida con el tráfico restante y con la
-%concatenación se hace una segunda regresión polinómica.
-%Poner las tablas de resultados de los parámetros theta predichos de la
-%concatenación también
-%Poner resultados de simulación: simplemente probar con la nueva idea (que
-%ya funciona) y mostrar cómo es la fdp rescatada de tráfico de ataque y si
-%acaso explicar un poco el enventanado en frecuencia.
