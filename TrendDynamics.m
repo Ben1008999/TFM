@@ -3,17 +3,17 @@
 clear all; close all; clc; warning off
 
 %PARAMETROS DE ENTRADA:----------------------------------------------------
-computeParams = 1;
-TPfilename = ""; APfilename = ""; %Nombres de los ficheros (si existieran)
+computeParams = 1; %Indica si se desea computar los parámetros alpha-estable y los coeficientes del polinomio (1) o bien si se desea leer dichos parámetros de un fichero de texto (0)
+TPfilename = ""; APfilename = ""; %Nombres de los ficheros (si existieran) en caso de que se desee leer los parámetros alpha-estable y los coeficientes del polinomio de un fichero de texto ya existente
 Tventana = 29; %[min] (Tamaño de ventana deslizante T)
 n = 6; %Grado de la regresión polinómica
-Granularidad_deteccion = 180; %= scope del sistema
+Granularidad_deteccion = 180; %= scope del sistema (alcance o tiempo de incertidumbre de predicción)
 bitsPaquetes = 3; %Indica si trabajar con bits/s (2) o packets/s (3)
 %--------------------------------------------------------------------------
 %Obtener la matriz con todas las series temporales de cada semana
-%NOTA: Dado que todas las series se han ordenado semanalmente, algunas
+%NOTA: Dado que todas las series se ordenan semanalmente, algunas
 %no tienen datos para ciertos días de la semana (por ejemplo, tal vez la
-%semana X del mes Y no tenga datos para el Lunes y el Martes). Por esta
+%semana 'X' del mes 'Y' no tenga datos para el Lunes y el Martes). Por esta
 %razón, es posible ver valores NaN al comienzo en las bases de datos de los
 %parámetros theta y alpha.
 %LA PRIMERA FILA DE LA MATRIZ DE AGREGADO ES EL DOMINIO:
