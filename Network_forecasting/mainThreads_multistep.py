@@ -8,6 +8,8 @@ Created on Wed Nov  2 20:54:46 2022
 #https://machinelearningmastery.com/how-to-develop-lstm-models-for-multi-step-time-series-forecasting-of-household-power-consumption/
 #https://datascience.stackexchange.com/questions/43191/validation-loss-is-not-decreasing
 #https://stats.stackexchange.com/questions/425610/why-massive-random-spikes-of-validation-loss
+#https://datascience.stackexchange.com/questions/43191/validation-loss-is-not-decreasing
+#https://stackoverflow.com/questions/61287322/validation-loss-sometimes-spiking En este enlace se explica que un tamaño de batch más pequeño produce spikes en las pérdidas de validación
 import math
 import threading
 import time
@@ -112,36 +114,34 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
         #En concreto, devuelve:
             # X: Matriz de características
             # y: Matriz de etiquetas
-            # in_seq: Secuencia de test que se introducirá a la red LSTM
-            # in_seq_truth: Secuencia Ground Truth 
-            # in_seq_test_norm: Secuencia de test que se introducirá a la red LSTM normalizada (esta es la secuencia que realmente se usa como test en la red LSTM)
-            # in_seq_truth_norm: Secuencia Ground Truth normalizada
+            # in_seq: Secuencia (vector de datos) que representa los datos usados para el entrenamiento de la red. De esta secuencia se crean los patrones pasado - futuro y además contiene todo:
+                #in_seq contiene tanto los datos de entrenamiento como los datos de test y de validación (Ground Truth) 
+            # in_seq_truth: Secuencia Ground Truth que se refiere a la secuencia predicha real
+            # in_seq_test_norm: Secuencia de test que se introducirá a la red LSTM normalizada (esta es la secuencia que realmente se usa como test en la red LSTM) y con la que la red obtendrá una salida de predicción
+            # in_seq_truth_norm: Secuencia Ground Truth que se refiere a la secuencia predicha real normalizada
             # model: objeto con la información del modelo
-            # inicio_val: 
-            # final_val: 
-            # timesteps_past: 
-            # minimo
-            # maximo
-            # n_steps
-            # n_subseqs
+            # inicio_val: Instante de tiempo inicial de la validación (incluido)
+            # final_val: Instante de tiempo final de la validación (incluido)
+            # timesteps_past: puntos pasados (memoria de la red LSTM)
+            # minimo: parámetro de normalización 1
+            # maximo: parámetro de normalización 1
+            # n_steps: número de puntos de la subsecuencia (en caso de usarla)
+            # n_subseqs: Número de subsecuencias (en caso de usarlas)
+
         kernel_size = round(time_neighbour_points/diezmado)
-
-        T_train = round(T_train/diezmado) #segundos. Tamaño de ventana de tiempo de entrenamiento. En multiescala de 180segs: un buen ejemplo es 100 + batch size = 1 + 300 unidades + 35 epochs
-        timesteps_past = round(time_past/diezmado) #segundos. En multiescala de 180segs: un buen ejemplo es 5
-
-        n_steps = round(time_subseqs/diezmado) #Número de puntos de la subsecuencia
+        T_train = round(T_train/diezmado) #Tamaño de ventana de tiempo de entrenamiento [s]
+        timesteps_past = round(time_past/diezmado)
+        n_steps = round(time_subseqs/diezmado) #Número de puntos de la subsecuencia (en caso de usarla)
 
         rest = divmod(timesteps_past, n_steps)
         if rest[1] is not 0:
             n_steps = get_closer_subseq_nsteps(timesteps_past, n_steps)
         n_subseqs = int(timesteps_past/n_steps) #Número de subsecuencias
 
-        #https://datascience.stackexchange.com/questions/43191/validation-loss-is-not-decreasing
-        #https://stackoverflow.com/questions/61287322/validation-loss-sometimes-spiking En este enlace se explica que un tamaño de batch más pequeño produce spikes en las pérdidas de validación
-            #Train:
-        inicio_train = final - T_train + 1; #. En multiescala de 180segs: un buen ejemplo es 500
+        #Train:
+        inicio_train = final - T_train + 1
         
-        #in_seq = theta_series_v2[semana][theta][inicio_train:final+1] #Serie temporal theta_i
+        #Por ejemplo, tomamos información de las 2 semanas anteriores y de la semana actual:
         in_seq = np.concatenate((theta_series_v2[7][theta][inicio_train:final+T_train+1], theta_series_v2[8][theta][inicio_train:final+T_train+1], theta_series_v2[semana][theta][inicio_train:final+1]))
         #Drop nan:
         in_seq = in_seq[np.logical_not(np.isnan(in_seq))]
@@ -155,15 +155,13 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
 
         X, y = split_sequence(in_seq_norm, timesteps_past, timesteps_future)
 
-
-        if CNN == 1: #Para LSTM CNN:
-            X = X.reshape((X.shape[0], n_subseqs, n_steps, n_features));
+        if CNN == 1: #Para CNN + LSTM, se debe dimensionar la matriz de entrenamiento de una forma concreta:
+            X = X.reshape((X.shape[0], n_subseqs, n_steps, n_features))
         if CNN == 0: #Para LSTM simple:
             X = X.reshape((X.shape[0], X.shape[1], n_features)); y = y.reshape((y.shape[0], y.shape[1], n_features))
         
-        
         #Test:
-        inicio_test = final - timesteps_past + 1;
+        inicio_test = final - timesteps_past + 1
         in_seq_test = theta_series_v2[semana][theta][inicio_test:final+1] #Serie temporal theta0
         if normalization == 0:
             in_seq_test_norm = dn.normalizeData_MinMax_using_scalerData(in_seq_test, minimo, maximo)
@@ -179,8 +177,8 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
         if CNN == 0:
             in_seq_test_norm = in_seq_test_norm.reshape((1, timesteps_past, n_features))
 
-            #Truth (validation)
-        inicio_val = (final + 1); final_val = inicio_val+timesteps_future-1;
+        #Truth (validation)
+        inicio_val = (final + 1); final_val = inicio_val+timesteps_future-1
         in_seq_truth = theta_series_v2[semana][theta][inicio_val:final_val+1] #Serie temporal theta0
         if normalization == 0:
             in_seq_truth_norm = dn.normalizeData_MinMax_using_scalerData(in_seq_truth, minimo, maximo)
@@ -196,7 +194,6 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
         if CNN == 0:
             in_seq_truth_norm = in_seq_truth_norm.reshape((1, in_seq_truth_norm.shape[0], n_features))
 
-        
         #CNN + LSTM:
         if CNN == 1:
             model = Sequential()
@@ -214,18 +211,6 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
             #optimizer = Adam(learning_rate=0.001)
             #model.compile(optimizer=optimizer, loss='mse')
             model.compile(optimizer='adam', loss='mse')
-            """
-            model = Sequential()
-            model.add(Conv1D(filters=32, kernel_size=1, activation='relu', input_shape=(X.shape[2], n_features)))
-            model.add(Conv1D(filters=32, kernel_size=1, activation='relu'))
-            model.add(MaxPooling1D(pool_size=2))
-            model.add(Flatten())
-            model.add(RepeatVector(timesteps_future))
-            model.add(LSTM(200, activation='relu', return_sequences=True))
-            model.add(TimeDistributed(Dense(100, activation='relu')))
-            model.add(TimeDistributed(Dense(1)))
-            model.compile(optimizer='adam', loss='mse')
-            """
         
         #LSTM Encoder Decoder simple:
         if CNN == 0:
@@ -235,7 +220,6 @@ def create_model(theta, time_past, time_subseqs, T_train, time_neighbour_points,
             model.add(LSTM(70, activation='relu', return_sequences=True))
             model.add(TimeDistributed(Dense(1)))
             model.compile(optimizer='adam', loss='mse')
-        
         
         return X, y, in_seq, in_seq_truth, in_seq_test_norm, in_seq_truth_norm, model, inicio_val, final_val, timesteps_past, minimo, maximo, n_steps, n_subseqs
 
@@ -280,29 +264,8 @@ def split_sequence(sequence, n_steps_in, n_steps_out):
 	return array(X), array(y)
 
 def trainLSTM(list, X, y, epochs, verbose, test_norm, truth_norm, model, ide):
-
-    class haltCallback(tf.keras.callbacks.Callback):
-        def on_epoch_end(self, epoch, logs={}):
-            if(logs.get('val_loss') <= 1e-18): #Para evitar overfitting
-                print("Value reached\n\n")
-                self.model.stop_training = True
-    trainingStopCallback = haltCallback()
-
     history = model.fit(X, y, epochs=epochs, verbose=verbose, validation_data=(test_norm, truth_norm), callbacks=[trainingStopCallback]) #callbacks=[trainingStopCallback]
     list[ide] = history
-    
-    """
-    if ide == 5:
-        fig, ax = pyplot.subplots(figsize=(8, 6))
-        pyplot.plot(history.history['loss'])
-        pyplot.plot(history.history['val_loss'])
-        pyplot.title('model train vs validation loss')
-        pyplot.ylabel('loss')
-        pyplot.xlabel('epoch')
-        pyplot.legend(['train', 'validation'], loc='upper right')
-        pyplot.ylim((0, 1))
-        pyplot.show()
-    """
 
 
 
@@ -375,6 +338,14 @@ if __name__=="__main__":
         #theta_series[0][1] = serie theta 0 de la semana siguiente a la más antigua
         #...
     #theta_series[1] = paquete con las series temporales de theta 1...
+    theta_series_v2 = np.zeros((n_series, n_coefs, n_ventanas))
+    #También se almacenan las series temporales de la siguiente manera para facilitar la concatenación por semanas posterior:
+    #theta_series_v2[0] = Parámetros theta de la serie temporal de marzo week3
+        #theta_series_v2[0][0] = Parámetro theta0 de la serie temporal de marzo week3
+        #theta_series_v2[0][1] = Parámetro theta1 de la serie temporal de marzo week3
+        #...
+    #theta_series_v2[1] = Parámetros theta de la serie temporal de marzo week4
+    #theta_series_v2[2] = Parámetros theta de la serie temporal de marzo week5
     final = round(tiempo_final/diezmado)
     tiempo_final = final*diezmado
 
@@ -390,6 +361,11 @@ if __name__=="__main__":
             #Tomamos los valores cada "diezmado" segundos:
             theta_evolution = thetaParams[::diezmado, (serie-1)*n_coefs+c-1]
             theta_series[c-1][serie-1] = theta_evolution
+    #Para el caso de theta_series_v2:
+    for serie in range(1, n_series+1):
+        for c in range(1, n_coefs+1):
+            theta_evolution = thetaParams[::diezmado, (serie-1)*n_coefs+c-1]
+            theta_series_v2[serie-1][c-1] = theta_evolution
     #------------------------------------------------------------------------------
     #Prueba de entrenamiento y predicción de parámetros theta:
     time_serie = all_series[semana]
@@ -478,39 +454,6 @@ if __name__=="__main__":
     coef5 = predict(model=model5, in_seq=in_seq5, in_seq_test_norm=in_seq5_test_norm, in_seq_truth=in_seq5_truth, recurrent_forecast=recurrent_forecast, normalization=normalization, minimo=minimo5, maximo=maximo5, inicio_val=inicio_val0, final_val=final_val0, timesteps_past=timesteps_past, n_subseqs=n_subseqs0, n_steps=n_steps0, timesteps_future_to_predict=timesteps_future_to_predict, timesteps_future=timesteps_future, theta_series_v2=theta_series_v2, theta=5, CNN=CNN)
     coef6 = predict(model=model6, in_seq=in_seq6, in_seq_test_norm=in_seq6_test_norm, in_seq_truth=in_seq6_truth, recurrent_forecast=recurrent_forecast, normalization=normalization, minimo=minimo6, maximo=maximo6, inicio_val=inicio_val0, final_val=final_val0, timesteps_past=timesteps_past, n_subseqs=n_subseqs0, n_steps=n_steps0, timesteps_future_to_predict=timesteps_future_to_predict, timesteps_future=timesteps_future, theta_series_v2=theta_series_v2, theta=6, CNN=CNN)
     coef7 = predict(model=model7, in_seq=in_seq7, in_seq_test_norm=in_seq7_test_norm, in_seq_truth=in_seq7_truth, recurrent_forecast=recurrent_forecast, normalization=normalization, minimo=minimo7, maximo=maximo7, inicio_val=inicio_val0, final_val=final_val0, timesteps_past=timesteps_past, n_subseqs=n_subseqs0, n_steps=n_steps0, timesteps_future_to_predict=timesteps_future_to_predict, timesteps_future=timesteps_future, theta_series_v2=theta_series_v2, theta=7, CNN=CNN)
-
-    #Proyectar en PCA:
-    coefs_predichos_pca = model.transform(np.array([coef0, coef1, coef2, coef3, coef4, coef5, coef6, coef7]).reshape(1, n+1))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
