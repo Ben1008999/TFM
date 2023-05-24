@@ -1,6 +1,5 @@
 """
 Created on Wed Nov  2 20:54:46 2022
-
 @author: Benjamín Martín Gómez
 """
 #Enlaces utilizados para este codigo:
@@ -64,9 +63,7 @@ def predict(model, in_seq, in_seq_test_norm, in_seq_truth, recurrent_forecast, n
                 in_seq_test_norm = dn.normalizeData_tanh_using_scalerData(in_seq_test, minimo, maximo)
             if normalization == 2:
                 in_seq_test_norm = dn.normalizeData_zscore_using_scalerData(in_seq_test, minimo, maximo)
-            
-            
-            
+
             #Para LSTM CNN:
             if CNN == 1:
                 in_seq_test_norm = in_seq_test_norm.reshape((1, n_subseqs, n_steps, n_features))
@@ -78,8 +75,8 @@ def predict(model, in_seq, in_seq_test_norm, in_seq_truth, recurrent_forecast, n
             
         
         fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
-        ax.plot(real);
-        ax.plot(prediction);
+        ax.plot(real)
+        ax.plot(prediction)
         pyplot.ylim(0.8*min(real), 1.2*max(real))
     
     else:
@@ -462,10 +459,9 @@ t = np.linspace(-(Tsventana-1), 0, Tsventana) + math.ceil(scope/2)
 t_step = 1/(2*t[-1])
 t = t*t_step
 
-#pol = coef0 + coef1*t + coef2*pow(t,2) + coef3*pow(t,3) + coef4*pow(t,4) + coef5*pow(t,5) + coef6*pow(t,6)
 pol = coef0 + coef1*t + coef2*pow(t,2) + coef3*pow(t,3) + coef4*pow(t,4) + coef5*pow(t,5) + coef6*pow(t,6) + coef7*pow(t,7)
 fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
-ax.plot(t, pol);
+ax.plot(t, pol)
 
 #True pol:
 coef0_truth = in_seq0_truth[-1]
@@ -492,11 +488,11 @@ print(str(round(coef7_truth, 2)) + ' --- ' + str(round(coef7, 2))+'\n')
 #pol_truth = coef0_truth + coef1_truth*t + coef2_truth*pow(t,2) + coef3_truth*pow(t,3) + coef4_truth*pow(t,4) + coef5_truth*pow(t,5) + coef6_truth*pow(t,6)
 pol_truth = coef0_truth + coef1_truth*t + coef2_truth*pow(t,2) + coef3_truth*pow(t,3) + coef4_truth*pow(t,4) + coef5_truth*pow(t,5) + coef6_truth*pow(t,6) + coef7_truth*pow(t,7)
 
-ax.plot(t, pol_truth);
+ax.plot(t, pol_truth)
 pyplot.legend(['prediction', 'real'], loc='upper right')
 pyplot.vlines(t[-scope], 0, 1.05*max(Window_Selected), linestyles ="dashed", colors="r")
 ax.set_xlim(t[0], t[-1])
-ax.plot(t, Window_Selected, linewidth=0.3);
+ax.plot(t, Window_Selected, linewidth=0.3)
 pyplot.ylim((0.95*min(Window_Selected), 1.05*max(Window_Selected)))
 
 
@@ -538,57 +534,3 @@ np.savetxt('outputs/polTruth'+str(tiempo_final)+str(recurrent_forecast)+'.txt', 
 np.savetxt('outputs/polPredicted'+str(tiempo_final)+str(recurrent_forecast)+'.txt', pol, delimiter=',');
 np.savetxt('outputs/theta_truth'+str(tiempo_final)+str(recurrent_forecast)+'.txt', coefs_reales, delimiter=',');
 np.savetxt('outputs/theta_predicted'+str(tiempo_final)+str(recurrent_forecast)+'.txt', coefs_predicted, delimiter=',');
-#Plot vs real time range:
-#Close all figures: pyplot.close('all')
-'''
-tref = 1465775999;
-Tsventana = 30*60;
-final = 24601+tref+scope;
-inicio = final-Tsventana;
-time_range_epoch = np.linspace(inicio+1, final, final-inicio)
-tiempoventana = []
-for e in time_range_epoch:
-    tiempoventana.append(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(e-7200)))
-
-fig, ax = pyplot.subplots(figsize=(8, 6))
-ax.plot(tiempoventana, pol);
-ax.plot(tiempoventana, pol_truth);
-pyplot.legend(['Prediction', 'Real'], loc='upper right')
-pyplot.vlines(tiempoventana[-scope], 0, 1.05*max(Window_Selected), linestyles ="dashed", colors="r")
-ax.set_xlim(tiempoventana[0], tiempoventana[-1])
-ax.plot(tiempoventana, Window_Selected, linewidth=0.3);
-pyplot.ylim((0.95*min(Window_Selected), 1.05*max(Window_Selected)))
-'''
-coefs_truth_pca = model.transform(np.array([coef0_truth, coef1_truth, coef2_truth, coef3_truth, coef4_truth, coef5_truth, coef6_truth, coef7_truth]).reshape(1, n+1))
-fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
-pyplot.scatter(X_data_norm[:, 0], X_data_norm[:, 1], alpha=0.2)
-pyplot.scatter(coefs_predichos_pca[:, 0], coefs_predichos_pca[:, 1], alpha=1, color="red")
-pyplot.scatter(coefs_truth_pca[:, 0], coefs_truth_pca[:, 1], alpha=1)
-
-
-#Plot real pol. vs previous pols:
-fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
-ax.plot(t, pol_truth);
-coefs_reales = [coef0_truth, coef1_truth, coef2_truth, coef3_truth, coef4_truth, coef5_truth, coef6_truth, coef7_truth]
-np.savetxt('pol_'+str(0)+'.txt', coefs_reales, delimiter=',');
-np.savetxt('pol_'+str(10)+'.txt', coefs_predicted, delimiter=',');
-for i in range(1):
-    i=i+1
-    coef0_previous1 = in_seq0[-i]
-    coef1_previous1 = in_seq1[-i]
-    coef2_previous1 = in_seq2[-i]
-    coef3_previous1 = in_seq3[-i]
-    coef4_previous1 = in_seq4[-i]
-    coef5_previous1 = in_seq5[-i]
-    coef6_previous1 = in_seq6[-i]
-    coef7_previous1 = in_seq7[-i]
-    
-    coefs_predicted = [coef0_previous1, coef1_previous1, coef2_previous1, coef3_previous1, coef4_previous1, coef5_previous1, coef6_previous1, coef7_previous1]
-    np.savetxt('pol_'+str(i)+'.txt', coefs_predicted, delimiter=',');
-    pol_previous = coef0_previous1 + coef1_previous1*t + coef2_previous1*pow(t,2) + coef3_previous1*pow(t,3) + coef4_previous1*pow(t,4) + coef5_previous1*pow(t,5) + coef6_previous1*pow(t,6) + coef7_previous1*pow(t,7)
-    
-    ax.plot(t-i, pol_previous);
-
-window_selected_index = round((tiempo_final+scope)/diezmado)
-Window_Selected2 = time_serie[window_selected_index*diezmado-i*scope:window_selected_index*diezmado+Tsventana]
-np.savetxt('windowSelectedExpandedParaMemoria.txt', Window_Selected2, delimiter=',');

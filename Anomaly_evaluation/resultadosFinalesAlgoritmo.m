@@ -1,86 +1,34 @@
 clear all; close all; clc; warning('off');
 
-tiempofinal = 67900;
-%27601
-%27900
-%28601
-%57900
-%67900
-%69000
-%80000
+%Variables de input:--------------------------------------------------------------------------------------------------------------------
+tiempofinal = 67900; %Valor numérico del nombre de archivo de los ficheros de output del predictor (ej.: polPredicted.txt)
+Tsventana = 1800; %[s] Tiempo en segundos de la ventana de simulación (mismo valor que se utilizó en el extractor de datos)
+n = 7; %Orden del polinomio
+tolerancia = 0.2; %Cuando el módulo es inferior a la tolerancia, se deja de tomar valores. Este valor determina el ancho de banda de evaluación de la anomalía en el cociente de Funciones Características
+granularidad_deteccion = 180; %[s]
+zoom = 9; %[min]; %Acercamiento para la detección de la anomalía
+%Duración del ataque: %[s]
+AttackDuration = 142;
+%Potencia de ataque: [packets/s]
+AttackPower = 12000;
+%---------------------------------------------------------------------------------------------------------------------------------------
 
-%Casos extraños:
-%76500
-%78000
-%63500
-%41551
-
-%Casos que he puesto en la memoria:
-%24601
-%49601
-%50601
-%50241 SES1
-%45001 SES2
-%25651 HES1
-%41551 BadResult1
-%63500 BadResult2
-%76500 BadResult3
-
-Tsventana = 1800;
-n = 7;
-tolerancia = 0.2; %Cuando el módulo es inferior a la tolerancia, se deja de tomar valores
+%Lectura de los polinomios y datos de salida del predictor:
 Predicted_pol = load(strcat(strcat('polPredicted', num2str(tiempofinal)), '.txt'));
 Real_pol = load(strcat(strcat('polTruth', num2str(tiempofinal)), '.txt'));
 pol = load(strcat(strcat('polParteConocida', num2str(tiempofinal)), '.txt'));
 polD = load(strcat(strcat('polParteDesconocida', num2str(tiempofinal)), '.txt'));
 W = load(strcat(strcat('WindowTest', num2str(tiempofinal)), '.txt'));
-tiempofinal = 18720;
-granularidad_deteccion = 180; %[s]
-zoom = 9; %[min]
 pol_completo = [pol; polD];
 
 %Dominio de tiempo:
-tref = 1465775999;
-Tsventana = 30*60;
+tref = 1465775999; %Valor constante (es el tiempo de referencia del Lunes [00:00:00])
 final = tiempofinal+tref+granularidad_deteccion;
 inicio = final-Tsventana;
 tiempoventana = datetime([inicio+1:final], 'convertfrom', 'posixtime')';
-figure; plot(tiempoventana, W, 'k');
-hold on; xline(tiempoventana(end-granularidad_deteccion), '--', 'lineWidth', 2);
-grid on; plot(tiempoventana, Real_pol, 'b', 'lineWidth', 1.7); %'Color', [0.6350 0.0780 0.1840]
-plot(tiempoventana, Predicted_pol, 'r', 'lineWidth', 1.7); ylim([0.8*min(W) 1.2*max(W)]);
-xlim([tiempoventana(1) tiempoventana(end)]); xlabel('Time'); ylabel('Bandwidth [packets/s]'); title('Ventana objetivo')
-%Prueba: regresionar W concatenado con polD:
-% W_total = [W; polD];
-% h_prueba = fit([1:length(W_total)]', W_total, 'poly7');
-% figure; plot(W_total); hold on; plot(h_prueba(1:length(W_total)));
-%Conclusión: no es buena idea.
-
-%Para la memoria:
-h_conocida = fit([1:Tsventana-granularidad_deteccion]', W(1:end-granularidad_deteccion), 'poly7');
-trend = [h_conocida(1:Tsventana-granularidad_deteccion); NaN*ones(1, granularidad_deteccion)'];
-trend = [h_conocida(1:Tsventana-granularidad_deteccion)];
-trend_2 = h_conocida(Tsventana-granularidad_deteccion+1:Tsventana);
-
-movingmean = movmean(W(1:end-granularidad_deteccion), 100);
-movingmean = [movingmean; NaN*ones(1, granularidad_deteccion)'];
-movingmean_true = movmean(W, 100);
-
-figure;
-plot(tiempoventana, W, 'k');
-hold on; xline(tiempoventana(end-granularidad_deteccion), '--', 'lineWidth', 2);
-grid on; plot(tiempoventana, Real_pol, 'b', 'lineWidth', 1.7); ylim([0.8*min(W) 1.2*max(W)]);
-plot(tiempoventana(1:Tsventana-granularidad_deteccion), trend, 'r', 'lineWidth', 1.7);
-plot(tiempoventana(Tsventana-granularidad_deteccion+1:Tsventana), trend_2, 'g', 'lineWidth', 1.7); 
-xlim([tiempoventana(1) tiempoventana(end)]); xlabel('Time'); ylabel('Bandwidth [packets/s]'); title('Ventana objetivo')
-
 
 %Prueba de ataque:
 WAtaque = zeros(1, length(W));
-%Duración del ataque: %[s]
-AttackDuration = 142;
-%Potencia de ataque: [packets/s]
-AttackPower = 12000;
 %Configurar distintas distribuciones de ataque:
 %Bi-modal Dirac:
 %RandomW = AttackPower*ones(1, AttackDuration);
@@ -228,25 +176,6 @@ plot(w, angle(ECFAtaque), 'g'); plot(w, abs(ECFAtaque), 'g'); hold off; grid on;
 legend('Módulo', 'Fase', 'Módulo y fase teóricos');
 ylim([-0.2 1.2])
 xlim([wrec(1) wrec(end)])
-
-%Estimar el ataque:
-% t_inf = 0; t_sup = 15000; t_step = 100;
-% tdomain = t_inf:t_step:t_sup;
-% error_min = Inf;
-% i=1;
-% error = zeros(1, length(t_inf:t_step:t_sup));
-% for i=1:length(tdomain) %t es el valor de ataque
-%     t = tdomain(i);
-%     analytic_exp = (zoom*60 - AttackDuration)/(zoom*60) + (AttackDuration/(zoom*60))*exp(1i*wrec*t);
-%     error(i) = sum(std(abs(analytic_exp - Cocienterec).^2));
-%     if(error(i) < error_min)
-%         error_min = error(i);
-%         t_est = t;
-%     end
-%     i=i+1;
-% end
-% figure; plot(tdomain, error);
-% fprintf("Ataque real: %.4f. Ataque estimado: %.4f\n", AttackPower, t_est);
 
 %Comparación con el caso ideal de conocer la tendencia background:
 h_ideal = fit([1:length(W_zoom)]', W_zoom, 'poly7');

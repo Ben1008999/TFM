@@ -1,3 +1,4 @@
+export LC_NUMERIC=en_US.UTF-8
 awk -F '[-:,]' -v tref=1462053500 '{
 	tf_flujo = mktime($1 " " $2 " " $3 " " $4 " " $5)-tref
 	dur_flujo = $6
