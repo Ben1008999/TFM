@@ -1,14 +1,16 @@
 %Obtener parámetros alpha-stable y coeficientes de regresión polinómica
 %para ventanas de Tventana minutos que se deslizan cada segundo:
 clear all; close all; clc; warning off
+addpath('./Functions')
 
 %PARAMETROS DE ENTRADA:----------------------------------------------------
 computeParams = 1; %Indica si se desea computar los parámetros alpha-estable y los coeficientes del polinomio (1) o bien si se desea leer dichos parámetros de un fichero de texto (0)
 TPfilename = ""; APfilename = ""; %Nombres de los ficheros (si existieran) en caso de que se desee leer los parámetros alpha-estable y los coeficientes del polinomio de un fichero de texto ya existente
-Tventana = 29; %[min] (Tamaño de ventana deslizante T)
-n = 6; %Grado de la regresión polinómica
+Tventana = 30; %[min] (Tamaño de ventana deslizante T)
+n = 7; %Grado de la regresión polinómica
 Granularidad_deteccion = 180; %= scope del sistema (alcance o tiempo de incertidumbre de predicción)
 bitsPaquetes = 3; %Indica si trabajar con bits/s (2) o packets/s (3)
+NTotalWindows = 45000; %Si se quiere usar un número de ventanas concreto y no esperar a que se procese toda la serie completa (tardaría días). En caso de querer procesar todas las ventanas, poner -1
 %--------------------------------------------------------------------------
 %Obtener la matriz con todas las series temporales de cada semana
 %NOTA: Dado que todas las series se ordenan semanalmente, algunas
@@ -18,18 +20,18 @@ bitsPaquetes = 3; %Indica si trabajar con bits/s (2) o packets/s (3)
 %parámetros theta y alpha.
 %LA PRIMERA FILA DE LA MATRIZ DE AGREGADO ES EL DOMINIO:
 domain = 1:7*24*60*60; %[1 = Lunes 00:00:01 -> 7*24*60*60 = Lunes (semana siguiente) 00:00:00]
-march_week3 = load('./march_week3_csv/BPSyPPS.txt');
-march_week4 = load('./march_week4_csv/BPSyPPS.txt');
-march_week5 = load('./march_week5_csv/BPSyPPS.txt');
-april_week2 = load('./april_week2_csv/BPSyPPS.txt');
-april_week3 = load('./april_week3_csv/BPSyPPS.txt');
-april_week4 = load('./april_week4_csv/BPSyPPS.txt');
-may_week1 = load('./may_week1_csv/BPSyPPS.txt');
-may_week3 = load('./may_week3_csv/BPSyPPS.txt');
-june_week1 = load('./june_week1_csv/BPSyPPS.txt');
-june_week2 = load('./june_week2_csv/BPSyPPS.txt');
-june_week3 = load('./june_week3_csv/BPSyPPS.txt');
-july_week1 = load('./july_week1_csv/BPSyPPS.txt');
+march_week3 = load('./TimeSeriesData/march_week3_csv/BPSyPPS.txt');
+march_week4 = load('./TimeSeriesData/march_week4_csv/BPSyPPS.txt');
+march_week5 = load('./TimeSeriesData/march_week5_csv/BPSyPPS.txt');
+april_week2 = load('./TimeSeriesData/april_week2_csv/BPSyPPS.txt');
+april_week3 = load('./TimeSeriesData/april_week3_csv/BPSyPPS.txt');
+april_week4 = load('./TimeSeriesData/april_week4_csv/BPSyPPS.txt');
+may_week1 = load('./TimeSeriesData/may_week1_csv/BPSyPPS.txt');
+may_week3 = load('./TimeSeriesData/may_week3_csv/BPSyPPS.txt');
+june_week1 = load('./TimeSeriesData/june_week1_csv/BPSyPPS.txt');
+june_week2 = load('./TimeSeriesData/june_week2_csv/BPSyPPS.txt');
+june_week3 = load('./TimeSeriesData/june_week3_csv/BPSyPPS.txt');
+july_week1 = load('./TimeSeriesData/july_week1_csv/BPSyPPS.txt');
 
 agregado = zeros(1, length(domain));
 agregado(1,:) = domain;
@@ -48,8 +50,9 @@ agregado(find(agregado <= 0)) = NaN;
 
 %Obtener series temporales con las dinámicas de la tendencia polinómica:
 Tsventana = Tventana*60;
-NTotalWindows = size(agregado,2) - Tsventana + 1;
-NTotalWindows = 90000; %Si se quiere usar un número de ventanas concreto y no esperar a que se procese toda la serie completa (tarda días)
+if(NTotalWindows == -1)
+    NTotalWindows = size(agregado,2) - Tsventana + 1;
+end
 %Definir el dominio de la regresión:
 domainFIT = [[-(Tsventana-1):0] + ceil(Granularidad_deteccion/2)]';
 stepdomainFIT = 1/(2*domainFIT(end));
@@ -88,9 +91,9 @@ if(computeParams == 1)
     end
 
     %Exportarlo a txt:
-    fileNameOutput_TP = strcat(strcat(strcat(strcat("TP", string(Tventana)), '_'), string(n)), ".txt");
+    fileNameOutput_TP = strcat(strcat(strcat(strcat("Data_extraction_output/TP", string(Tventana)), '_'), string(n)), ".txt");
     writecell(theta_params(1:i-1, :), fileNameOutput_TP);
-    fileNameOutput_AP = strcat(strcat(strcat(strcat("AP", string(Tventana)), '_'), string(n)), ".txt");
+    fileNameOutput_AP = strcat(strcat(strcat(strcat("Data_extraction_output/AP", string(Tventana)), '_'), string(n)), ".txt");
     writecell(alpha_params(1:i-1, :), fileNameOutput_AP);
     %Formato de nombre de archivo:
     %APX_Y.txt
