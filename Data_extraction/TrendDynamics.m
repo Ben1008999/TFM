@@ -47,6 +47,8 @@ agregado = addTimeSeriesToWeek(june_week2, agregado, bitsPaquetes);
 agregado = addTimeSeriesToWeek(june_week3, agregado, bitsPaquetes);
 agregado = addTimeSeriesToWeek(july_week1, agregado, bitsPaquetes);
 agregado(find(agregado <= 0)) = NaN;
+%Exportar las series temporales concatenadas en un fichero de texto:
+writematrix(agregado(2:end,:), 'Data_extraction_output/All_series.txt');
 
 %Obtener series temporales con las dinámicas de la tendencia polinómica:
 Tsventana = Tventana*60;
@@ -57,6 +59,7 @@ end
 domainFIT = [[-(Tsventana-1):0] + ceil(Granularidad_deteccion/2)]';
 stepdomainFIT = 1/(2*domainFIT(end));
 domainFIT = domainFIT*stepdomainFIT;
+writematrix(domainFIT, 'Data_extraction_output/Dominio_regresion.txt');
 
 if(computeParams == 1)
     theta_params = cell(NTotalWindows, size(agregado,1)-1);

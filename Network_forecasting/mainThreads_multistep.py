@@ -261,7 +261,7 @@ def split_sequence(sequence, n_steps_in, n_steps_out):
 	return array(X), array(y)
 
 def trainLSTM(list, X, y, epochs, verbose, test_norm, truth_norm, model, ide):
-    history = model.fit(X, y, epochs=epochs, verbose=verbose, validation_data=(test_norm, truth_norm), callbacks=[trainingStopCallback]) #callbacks=[trainingStopCallback]
+    history = model.fit(X, y, epochs=epochs, verbose=verbose, validation_data=(test_norm, truth_norm)) #callbacks=[trainingStopCallback]
     list[ide] = history
 
 
@@ -272,18 +272,18 @@ if __name__=="__main__":
     pyplot.close('all') #Se cierran las posibles figuras que hubiera antes de ejecutar este código
 
     #Variables de entrada:--------------------------------------------------------------------------------------------------------------
-    Tsventana = 30*60 #Tamaño de ventana que se usó para sacar los coeficientes y parámetros alpha-stable (poner mismo valor que en TrendDynamics)
-    n = 7 #Grado de la regresión polinómica que se usó cuando se obtuvieron estos parámetros theta (poner mismo valor que en TrendDynamics)
+    Tsventana = 30*60 #Tamaño de ventana que se usó para sacar los coeficientes y parámetros alpha-stable (poner mismo valor que en TrendDynamics.m)
+    n = 7 #Grado de la regresión polinómica que se usó cuando se obtuvieron estos parámetros theta (poner mismo valor que en TrendDynamics.m)
     timesteps_future = 1 #Número de puntos futuros usados para la predicción
     timesteps_future_recurrent = 1 #Número de tiempos usados para la predicción recurrente
     diezmado = 180 #[s] Período de muestreo de las series temporales de los coeficientes theta/alpha
     recurrent_forecast = 0 #0: no se desea predicción recurrente. 1: se desea predicción recurrente (se adivina un punto y se usa para la siguiente predicción y así hasta completar los multistep puntos)
     normalization = 2 #0: MinMax. 1: tanh. 2: zscore
     CNN = 0 #1: CNN + LSTM. 0: LSTM simple
-    filename_thetaParams = "TP30_7.txt" #Fichero con los parámetros theta de entrenamiento obtenidos de TrendDynamics.m
-    filename_network_traffic_series = 'All_series.txt' #Fichero con todas las series temporales (matriz agregado de TrendDynamics.m)
+    filename_thetaParams = "../Data_extraction/Data_extraction_output/TP30_7.txt" #Fichero con los parámetros theta de entrenamiento obtenidos de TrendDynamics.m
+    filename_network_traffic_series = '../Data_extraction/Data_extraction_output/All_series.txt' #Fichero con todas las series temporales (matriz agregado de TrendDynamics.m)
     semana = 9 #Indexada desde el 0 incluido. Semana de test. A continuación, se indica el índice de cada semana (de este repositorio):
-    tiempo_final = 27849 #Instante de tiempo final [s] (de las series theta_i) del que se conocen datos (en segundos, desde las 00:00:00 del lunes)
+    tiempo_final = 4849 #Instante de tiempo final [s] (de las series theta_i) del que se conocen datos (en segundos, desde las 00:00:00 del lunes)
     #Por ejemplo, si se pone como tiempo_final = 86400, entonces este código va a coger toda la información de los parámetros theta/alpha que va desde el lunes 00:00:00 hasta el martes 00:00:00 incluidos ambos
     #Cabe destacar que el tiempo_final no es un valor libre, sino limitado al diezmado. En un ejemplo simple, si tiempo_final es 10s y el diezmado es de 3s, entonces no es posible tomar la muestra 10 de las series temporales
     #de theta_i, porque 10 no es múltiplo de 3; solo se podrían tomar los segundos 0, 3, 6, 9... Por ello, en este código hay una etapa encargada de redondear y tomar la muestra
@@ -384,7 +384,7 @@ if __name__=="__main__":
 
 
 
-    #THETA0:--------------------------------------------------------------------------------------------------
+
     X0, y0, in_seq0, in_seq0_truth, in_seq0_test_norm, in_seq0_truth_norm, model0, inicio_val0, final_val0, timesteps_past, minimo0, maximo0, n_steps0, n_subseqs0 = create_model(theta=0, time_past=time_past0, time_subseqs=time_subseqs0, T_train=T_train0, time_neighbour_points=time_neighbour_points0, normalization=normalization, CNN=CNN, theta_series_v2=theta_series_v2)
     X1, y1, in_seq1, in_seq1_truth, in_seq1_test_norm, in_seq1_truth_norm, model1, inicio_val1, final_val1, timesteps_past, minimo1, maximo1, n_steps1, n_subseqs1 = create_model(theta=1, time_past=time_past0, time_subseqs=time_subseqs0, T_train=T_train0, time_neighbour_points=time_neighbour_points0, normalization=normalization, CNN=CNN, theta_series_v2=theta_series_v2)
     X2, y2, in_seq2, in_seq2_truth, in_seq2_test_norm, in_seq2_truth_norm, model2, inicio_val2, final_val2, timesteps_past, minimo2, maximo2, n_steps2, n_subseqs2 = create_model(theta=2, time_past=time_past0, time_subseqs=time_subseqs0, T_train=T_train0, time_neighbour_points=time_neighbour_points0, normalization=normalization, CNN=CNN, theta_series_v2=theta_series_v2)
@@ -402,6 +402,8 @@ if __name__=="__main__":
     my_thread5 = threading.Thread(target=trainLSTM, args=(history_list, X5, y5, epoch, 0, in_seq5_test_norm, in_seq5_truth_norm, model5, 5))
     my_thread6 = threading.Thread(target=trainLSTM, args=(history_list, X6, y6, epoch, 0, in_seq6_test_norm, in_seq6_truth_norm, model6, 6))
     my_thread7 = threading.Thread(target=trainLSTM, args=(history_list, X7, y7, epoch, 0, in_seq7_test_norm, in_seq7_truth_norm, model7, 7))
+
+
 
 
     """
@@ -454,83 +456,28 @@ if __name__=="__main__":
 
 
 
-#Testeo de la predicción en la serie temporal: Aquí se asume que el último valor del array de predicción es el coeficiente buscado en cada caso
-t = np.linspace(-(Tsventana-1), 0, Tsventana) + math.ceil(scope/2)
-t_step = 1/(2*t[-1])
-t = t*t_step
+    #Testeo de la predicción en la serie temporal: Aquí se asume que el último valor del array de predicción es el coeficiente buscado en cada caso
+    t = np.linspace(-(Tsventana-1), 0, Tsventana) + math.ceil(scope/2)
+    t_step = 1/(2*t[-1])
+    t = t*t_step
 
-pol = coef0 + coef1*t + coef2*pow(t,2) + coef3*pow(t,3) + coef4*pow(t,4) + coef5*pow(t,5) + coef6*pow(t,6) + coef7*pow(t,7)
-fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
-ax.plot(t, pol)
+    pol = coef0 + coef1*t + coef2*pow(t,2) + coef3*pow(t,3) + coef4*pow(t,4) + coef5*pow(t,5) + coef6*pow(t,6) + coef7*pow(t,7)
+    fig, ax = pyplot.subplots(figsize=(8, 6)) #New figure
+    ax.plot(t, pol)
 
-#True pol:
-coef0_truth = in_seq0_truth[-1]
-coef1_truth = in_seq1_truth[-1]
-coef2_truth = in_seq2_truth[-1]
-coef3_truth = in_seq3_truth[-1]
-coef4_truth = in_seq4_truth[-1]
-coef5_truth = in_seq5_truth[-1]
-coef6_truth = in_seq6_truth[-1]
-coef7_truth = in_seq7_truth[-1]
-
-
-
-print('Real vs Predicted')
-print(str(round(coef0_truth, 2)) + ' --- ' + str(round(coef0, 2))+'\n')
-print(str(round(coef1_truth, 2)) + ' ---' + str(round(coef1, 2))+'\n')
-print(str(round(coef2_truth, 2)) + ' --- ' + str(round(coef2, 2))+'\n')
-print(str(round(coef3_truth, 2)) + ' --- ' + str(round(coef3, 2))+'\n')
-print(str(round(coef4_truth, 2)) + ' --- ' + str(round(coef4, 2))+'\n')
-print(str(round(coef5_truth, 2)) + ' --- ' + str(round(coef5, 2))+'\n')
-print(str(round(coef6_truth, 2)) + ' --- ' + str(round(coef6, 2))+'\n')
-print(str(round(coef7_truth, 2)) + ' --- ' + str(round(coef7, 2))+'\n')
-
-#pol_truth = coef0_truth + coef1_truth*t + coef2_truth*pow(t,2) + coef3_truth*pow(t,3) + coef4_truth*pow(t,4) + coef5_truth*pow(t,5) + coef6_truth*pow(t,6)
-pol_truth = coef0_truth + coef1_truth*t + coef2_truth*pow(t,2) + coef3_truth*pow(t,3) + coef4_truth*pow(t,4) + coef5_truth*pow(t,5) + coef6_truth*pow(t,6) + coef7_truth*pow(t,7)
-
-ax.plot(t, pol_truth)
-pyplot.legend(['prediction', 'real'], loc='upper right')
-pyplot.vlines(t[-scope], 0, 1.05*max(Window_Selected), linestyles ="dashed", colors="r")
-ax.set_xlim(t[0], t[-1])
-ax.plot(t, Window_Selected, linewidth=0.3)
-pyplot.ylim((0.95*min(Window_Selected), 1.05*max(Window_Selected)))
+    #True pol:
+    coef0_truth = in_seq0_truth[-1]
+    coef1_truth = in_seq1_truth[-1]
+    coef2_truth = in_seq2_truth[-1]
+    coef3_truth = in_seq3_truth[-1]
+    coef4_truth = in_seq4_truth[-1]
+    coef5_truth = in_seq5_truth[-1]
+    coef6_truth = in_seq6_truth[-1]
+    coef7_truth = in_seq7_truth[-1]
 
 
-#Polinomio total:
-#pol_parte_conocida = pol[0:len(pol)-scope]-coef0
-Window_Selected_parte_conocida = Window_Selected[0:len(pol)-scope]
-
-#x = np.array(range(len(Window_Selected_parte_conocida)))+1
-x = t[:len(Window_Selected_parte_conocida)]
-coeffs = np.polyfit(x, Window_Selected_parte_conocida, n)
-pol_parte_conocida = np.polyval(coeffs, x)
-
-pol_parte_desconocida = pol[-scope:]
-pol_total = np.concatenate((pol_parte_conocida, pol_parte_desconocida))
-#ax.plot(t, pol_total);
-
-print('Comparación entre polinomio de la ventana total (superparte) y de la ventana conocida (subparte):\n')
-print('Superparte - Subparte\n')
-print(str(coef0_truth) + ' - ' + str(coeffs[-1])+'\n')
-print(str(coef1_truth) + ' - ' + str(coeffs[-2])+'\n')
-print(str(coef2_truth) + ' - ' + str(coeffs[-3])+'\n')
-print(str(coef3_truth) + ' - ' + str(coeffs[-4])+'\n')
-print(str(coef4_truth) + ' - ' + str(coeffs[-5])+'\n')
-print(str(coef5_truth) + ' - ' + str(coeffs[-6])+'\n')
-print(str(coef6_truth) + ' - ' + str(coeffs[-7])+'\n')
-print(str(coef7_truth) + ' - ' + str(coeffs[-8])+'\n')
-"""
-fig, ax = pyplot.subplots(figsize=(8, 6))
-ax.plot(x, pol_parte_conocida);
-ax.plot(x, Window_Selected_parte_conocida);
-"""
-
-coefs_reales = [coef0_truth, coef1_truth, coef2_truth, coef3_truth, coef4_truth, coef5_truth, coef6_truth, coef7_truth]
-coefs_predicted = [coef0, coef1, coef2, coef3, coef4, coef5, coef6, coef7]
-np.savetxt('outputs/polParteConocida'+str(tiempo_final)+str(recurrent_forecast)+'.txt', pol_parte_conocida, delimiter=',');
-np.savetxt('outputs/polParteDesconocida'+str(tiempo_final)+str(recurrent_forecast)+'.txt', pol_parte_desconocida, delimiter=',');
-np.savetxt('outputs/WindowTest'+str(tiempo_final)+str(recurrent_forecast)+'.txt', Window_Selected, delimiter=',');
-np.savetxt('outputs/polTruth'+str(tiempo_final)+str(recurrent_forecast)+'.txt', pol_truth, delimiter=',');
-np.savetxt('outputs/polPredicted'+str(tiempo_final)+str(recurrent_forecast)+'.txt', pol, delimiter=',');
-np.savetxt('outputs/theta_truth'+str(tiempo_final)+str(recurrent_forecast)+'.txt', coefs_reales, delimiter=',');
-np.savetxt('outputs/theta_predicted'+str(tiempo_final)+str(recurrent_forecast)+'.txt', coefs_predicted, delimiter=',');
+    coefs_reales = [coef0_truth, coef1_truth, coef2_truth, coef3_truth, coef4_truth, coef5_truth, coef6_truth, coef7_truth]
+    coefs_predicted = [coef0, coef1, coef2, coef3, coef4, coef5, coef6, coef7]
+    np.savetxt('outputs/WindowTest.txt', Window_Selected, delimiter=',');
+    np.savetxt('outputs/theta_truth.txt', coefs_reales, delimiter=',');
+    np.savetxt('outputs/theta_predicted.txt', coefs_predicted, delimiter=',');
