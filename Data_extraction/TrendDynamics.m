@@ -20,35 +20,34 @@ NTotalWindows = 45000; %Si se quiere usar un número de ventanas concreto y no e
 %parámetros theta y alpha.
 %LA PRIMERA FILA DE LA MATRIZ DE AGREGADO ES EL DOMINIO:
 domain = 1:7*24*60*60; %[1 = Lunes 00:00:01 -> 7*24*60*60 = Lunes (semana siguiente) 00:00:00]
-march_week3 = load('./TimeSeriesData/march_week3_csv/BPSyPPS.txt');
-march_week4 = load('./TimeSeriesData/march_week4_csv/BPSyPPS.txt');
-march_week5 = load('./TimeSeriesData/march_week5_csv/BPSyPPS.txt');
-april_week2 = load('./TimeSeriesData/april_week2_csv/BPSyPPS.txt');
-april_week3 = load('./TimeSeriesData/april_week3_csv/BPSyPPS.txt');
-april_week4 = load('./TimeSeriesData/april_week4_csv/BPSyPPS.txt');
-may_week1 = load('./TimeSeriesData/may_week1_csv/BPSyPPS.txt');
-may_week3 = load('./TimeSeriesData/may_week3_csv/BPSyPPS.txt');
-june_week1 = load('./TimeSeriesData/june_week1_csv/BPSyPPS.txt');
-june_week2 = load('./TimeSeriesData/june_week2_csv/BPSyPPS.txt');
-june_week3 = load('./TimeSeriesData/june_week3_csv/BPSyPPS.txt');
-july_week1 = load('./TimeSeriesData/july_week1_csv/BPSyPPS.txt');
+filenames = ["./TimeSeriesData/march_week3_csv/BPSyPPS.txt";
+             "./TimeSeriesData/march_week4_csv/BPSyPPS.txt";
+             "./TimeSeriesData/march_week5_csv/BPSyPPS.txt";
+             "./TimeSeriesData/april_week2_csv/BPSyPPS.txt";
+             "./TimeSeriesData/april_week3_csv/BPSyPPS.txt";
+             "./TimeSeriesData/april_week4_csv/BPSyPPS.txt";
+             "./TimeSeriesData/may_week1_csv/BPSyPPS.txt";
+             "./TimeSeriesData/may_week3_csv/BPSyPPS.txt";
+             "./TimeSeriesData/june_week1_csv/BPSyPPS.txt";
+             "./TimeSeriesData/june_week2_csv/BPSyPPS.txt";
+             "./TimeSeriesData/june_week3_csv/BPSyPPS.txt";
+             "./TimeSeriesData/july_week1_csv/BPSyPPS.txt"];
+labels = {['domain', getLabelsFromFilenames(filenames)]'};
 
 agregado = zeros(1, length(domain));
 agregado(1,:) = domain;
-agregado = addTimeSeriesToWeek(march_week3, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(march_week4, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(march_week5, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(april_week2, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(april_week4, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(may_week1, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(may_week3, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(june_week1, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(june_week2, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(june_week3, agregado, bitsPaquetes);
-agregado = addTimeSeriesToWeek(july_week1, agregado, bitsPaquetes);
+for i=1:length(filenames)
+    filename = filenames(i);
+    time_serie = load(filename);
+    agregado = addTimeSeriesToWeek(time_serie, agregado, bitsPaquetes);
+end
 agregado(find(agregado <= 0)) = NaN;
+
+%Añadir una columna con las etiquetas de cada serie temporal:
+agregado = [labels agregado];
 %Exportar las series temporales concatenadas en un fichero de texto:
-writematrix(agregado(2:end,:), 'Data_extraction_output/All_series.txt');
+data = agregado{1,2};
+writematrix(data(2:end,:), 'Data_extraction_output/All_series.txt');
 
 %Obtener series temporales con las dinámicas de la tendencia polinómica:
 Tsventana = Tventana*60;

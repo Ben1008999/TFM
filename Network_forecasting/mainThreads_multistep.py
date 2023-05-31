@@ -306,6 +306,9 @@ if __name__=="__main__":
 
     10 = july_week1
     """
+    
+    
+    
     #Parámetros de la red LSTM y del entrenamiento:
     #Estos parámetros se definen para una red LSTM concreta (la de theta0) y en este Script se usan los mismos parámetros para el resto de las redes (del resto de parámetros). Sin embargo, cada red LSTM se podría configurar independientemente del resto. Para ello,
     #más abajo, en la sección de modelos de entrenamiento, en create_model y en train_LSTM se pueden pasar distintos argumentos.
