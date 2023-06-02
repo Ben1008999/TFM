@@ -4,22 +4,12 @@ clear all; close all; clc; warning off
 addpath('./Functions')
 
 %PARAMETROS DE ENTRADA:----------------------------------------------------
-computeParams = 1; %Indica si se desea computar los parámetros alpha-estable y los coeficientes del polinomio (1) o bien si se desea leer dichos parámetros de un fichero de texto (0)
-TPfilename = ""; APfilename = ""; %Nombres de los ficheros (si existieran) en caso de que se desee leer los parámetros alpha-estable y los coeficientes del polinomio de un fichero de texto ya existente
+JSONoutput_filename = "trendDynamicsOutput.json"; %Nombre del fichero JSON de salida. Ejemplo: outputJSON.json
 Tventana = 30; %[min] (Tamaño de ventana deslizante T)
 n = 7; %Grado de la regresión polinómica
 Granularidad_deteccion = 180; %= scope del sistema (alcance o tiempo de incertidumbre de predicción)
 bitsPaquetes = 3; %Indica si trabajar con bits/s (2) o packets/s (3)
-NTotalWindows = 45000; %Si se quiere usar un número de ventanas concreto y no esperar a que se procese toda la serie completa (tardaría días). En caso de querer procesar todas las ventanas, poner -1
-%--------------------------------------------------------------------------
-%Obtener la matriz con todas las series temporales de cada semana
-%NOTA: Dado que todas las series se ordenan semanalmente, algunas
-%no tienen datos para ciertos días de la semana (por ejemplo, tal vez la
-%semana 'X' del mes 'Y' no tenga datos para el Lunes y el Martes). Por esta
-%razón, es posible ver valores NaN al comienzo en las bases de datos de los
-%parámetros theta y alpha.
-%LA PRIMERA FILA DE LA MATRIZ DE AGREGADO ES EL DOMINIO:
-domain = 1:7*24*60*60; %[1 = Lunes 00:00:01 -> 7*24*60*60 = Lunes (semana siguiente) 00:00:00]
+NTotalWindows = 100; %Si se quiere usar un número de ventanas concreto y no esperar a que se procese toda la serie completa (tardaría días). En caso de querer procesar todas las ventanas, poner -1
 filenames = ["./TimeSeriesData/march_week3_csv/BPSyPPS.txt";
              "./TimeSeriesData/march_week4_csv/BPSyPPS.txt";
              "./TimeSeriesData/march_week5_csv/BPSyPPS.txt";
@@ -32,83 +22,27 @@ filenames = ["./TimeSeriesData/march_week3_csv/BPSyPPS.txt";
              "./TimeSeriesData/june_week2_csv/BPSyPPS.txt";
              "./TimeSeriesData/june_week3_csv/BPSyPPS.txt";
              "./TimeSeriesData/july_week1_csv/BPSyPPS.txt"];
+%--------------------------------------------------------------------------
+%Obtener la matriz con todas las series temporales de cada semana
+%NOTA: Dado que todas las series se ordenan semanalmente, algunas
+%no tienen datos para ciertos días de la semana (por ejemplo, tal vez la
+%semana 'X' del mes 'Y' no tenga datos para el Lunes y el Martes). Por esta
+%razón, es posible ver valores NaN al comienzo en las bases de datos de los
+%parámetros theta y alpha.
+%LA PRIMERA FILA DE LA MATRIZ DE AGREGADO ES EL DOMINIO:
+domain = 1:7*24*60*60; %[1 = Lunes 00:00:01 -> 7*24*60*60 = Lunes (semana siguiente) 00:00:00]
 labels = {['domain', getLabelsFromFilenames(filenames)]'};
+agregado = getAggregateNetTrafficMatrix(filenames, bitsPaquetes, domain);
 
-agregado = zeros(1, length(domain));
-agregado(1,:) = domain;
-for i=1:length(filenames)
-    filename = filenames(i);
-    time_serie = load(filename);
-    agregado = addTimeSeriesToWeek(time_serie, agregado, bitsPaquetes);
-end
-agregado(find(agregado <= 0)) = NaN;
-
-%Añadir una columna con las etiquetas de cada serie temporal:
-agregado = [labels agregado];
-%Exportar las series temporales concatenadas en un fichero de texto:
-data = agregado{1,2};
-writematrix(data(2:end,:), 'Data_extraction_output/All_series.txt');
-
-%Obtener series temporales con las dinámicas de la tendencia polinómica:
-Tsventana = Tventana*60;
-if(NTotalWindows == -1)
-    NTotalWindows = size(agregado,2) - Tsventana + 1;
-end
+%Obtener series temporales con las dinámicas de la tendencia polinómica y los parámetros alpha-estable:
 %Definir el dominio de la regresión:
-domainFIT = [[-(Tsventana-1):0] + ceil(Granularidad_deteccion/2)]';
-stepdomainFIT = 1/(2*domainFIT(end));
-domainFIT = domainFIT*stepdomainFIT;
-writematrix(domainFIT, 'Data_extraction_output/Dominio_regresion.txt');
+Tsventana = Tventana*60;
+domainFIT = getDomainFIT(Tsventana, Granularidad_deteccion);
+[theta_params, alpha_params] = processTrendDynamics(agregado, Tsventana, n, NTotalWindows, domainFIT);
 
-if(computeParams == 1)
-    theta_params = cell(NTotalWindows, size(agregado,1)-1);
-    alpha_params = cell(NTotalWindows, size(agregado,1)-1);
-    for i=1:NTotalWindows
-        WNormal = agregado(2:end, i:i+Tsventana-1);
-        for j=1:size(WNormal,1) %Por cada serie temporal
-            if(sum(isnan(WNormal(j,:))) >= 1) %Si hay 1 NaN o más no se puede hacer fit
-                theta_params{i,j} = NaN*ones(1, n+1);
-                alpha_params{i,j} = NaN*ones(1, 4);
-            else
-                %Parámetros theta:
-                regressiontype = strcat('poly', string(n));
-                h = fit(domainFIT, WNormal(j,:)', regressiontype);
-                h_accurate = fit([1:Tsventana]', WNormal(j,:)', 'poly9'); %Para los alpha stables siempre usamos regresión de orden 9!
-                theta_params{i,j} = flip(coeffvalues(h));
-                %Parámetros alpha:
-                Xt = WNormal(j,:)-h_accurate(1:Tsventana)';
-                try
-                    Parametros_AlphaStable = fitdist(Xt', 'Stable');
-                    alpha = Parametros_AlphaStable.alpha;
-                    beta = Parametros_AlphaStable.beta;
-                    gamma = Parametros_AlphaStable.gam;
-                    delta = Parametros_AlphaStable.delta;
-                catch e
-                    alpha = NaN; beta = NaN; gamma = NaN; delta = NaN;
-                end
-                alpha_params{i,j} = [alpha, beta, gamma, delta];
-            end
-        end
-        fprintf("Computing params... %.3f [%%]\n", i*100/NTotalWindows);
-    end
-
-    %Exportarlo a txt:
-    fileNameOutput_TP = strcat(strcat(strcat(strcat("Data_extraction_output/TP", string(Tventana)), '_'), string(n)), ".txt");
-    writecell(theta_params(1:i-1, :), fileNameOutput_TP);
-    fileNameOutput_AP = strcat(strcat(strcat(strcat("Data_extraction_output/AP", string(Tventana)), '_'), string(n)), ".txt");
-    writecell(alpha_params(1:i-1, :), fileNameOutput_AP);
-    %Formato de nombre de archivo:
-    %APX_Y.txt
-    %   X = Tamaño de ventana usado (min)
-    %   Y = Orden de la regresión polinómica usado
-    thetas = cell2mat(theta_params);
-    alphas = cell2mat(alpha_params);
-else
-    %%Leer los parámetros y representarlos:
-    thetas = cell2mat(readcell(TPfilename));
-    alphas = cell2mat(readcell(APfilename));
-    NTotalWindows = size(thetas,1);
-end
+%Exportar las dinámicas de la tendencia y los parámetros alpha-stable:
+outputJSON = buildJSONinfo(Tventana, n, Granularidad_deteccion, bitsPaquetes, NTotalWindows, agregado, labels, theta_params, alpha_params, domainFIT);
+writeJSON(strcat("./Data_extraction_output/", JSONoutput_filename), outputJSON);
 %Formato de almacenamiento de los datos:
 %Parámetros theta:
 %   [theta0 theta1 theta2...] serie 1 ventana 1 | [theta0 theta1 theta2...] serie 2 ventana 1
@@ -121,6 +55,8 @@ end
 %Lo mismo con los parámetros alpha
 
 %Representación:
+thetas = cell2mat(theta_params);
+alphas = cell2mat(alpha_params);
 for c=1:n+1 %Por cada coeficiente:
     figure;
     for i=1:size(thetas,2)/(n+1) %Sacaremos size(thetas,2)/(n+1) gráficas, una por cada serie temporal
