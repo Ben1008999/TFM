@@ -13,8 +13,32 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.widgets import Slider
 import matplotlib
 import math
+import json
+from GUIStyleModule import GraphicalUserInterface
 matplotlib.use('Agg')
 
+def getJSONTrendDynamicsData(filenameJSON):
+    #Function to get JSON data from JSON filename:
+    f = open(filenameJSON)
+    dataJSON = json.load(f)
+    return dataJSON
+
+def getAllSeriesMatrix(JSONobject):
+    #Function to get the matrix with the time series data from JSON object:
+    key_list = list(JSONobject.keys())[7:-2]
+    all_series = np.zeros((len(key_list), len(JSONobject[key_list[0]])))
+    for i in range(len(key_list)):
+        time_serie = JSONobject[key_list[i]]
+        all_series[i] = time_serie
+    return all_series
+
+def getThetaParamsMatrix(JSONobject):
+    #Function to get the matrix with theta params of sliding windows from JSON object:
+    n = JSONobject["n"]
+    Tsventana = JSONobject["Tsventana"]
+    thetaParams = np.array(JSONobject["TP"+str(int(Tsventana/60))+'_'+str(n)])
+    return thetaParams
+    
 def get_divisors(x):
     result = []
     for i in range(1, math.floor(x/2)):
@@ -29,17 +53,81 @@ def contains_nan(lst):
             return True
     return False
 
-def createGUI(filename_network_traffic_series, filename_thetaParams, n, granularidad_deteccion, Tsventana):
-    #Paso 0: obtener los datos de cada semana:
-    all_series = np.loadtxt(filename_network_traffic_series, delimiter=',')
-    thetaParams = np.loadtxt(filename_thetaParams, delimiter=',')
-    
-    #Paso 1: preparar layout vacío inicialmente:
+def createDefaultGUI(initial_display_week, initial_display_coefficient, all_series, n, Tsventana, granularidad_deteccion, thetaParams):
+    #Function to initialize GUI:
     root = tk.Tk()
     root.title("Predictor")
     root.geometry("1080x800")
     
+    labelChooseWeek = tk.Label(root, text="Choose here the week:")
+    labelChooseWeek.pack()
+    spinboxChooseWeek = ttk.Spinbox(root, from_=0, to=all_series.shape[0]-1, increment=1)
+    spinboxChooseWeek.set(0)
+    spinboxChooseWeek.pack()
+    
+    fig, (ax, ax_zoom) = plt.subplots(1, 2, figsize=(10, 5))
+    #Plot de la serie temporal inicial:
+    time_serie = all_series[initial_display_week]
+    time_serie_plot = ax.plot(time_serie, linewidth=0.1, color='blue')
+    #Plot de los límites de la ventana:
+    x = [1, 1+Tsventana-1]; y = [0, 150000]
+    window_limits_plot = ax.plot(x, y, color='red'); ax.set_xlim(1, len(time_serie)); ax.set_ylim(1, 150000); ax.grid(True, alpha=0.5)
+    #Plot de la ventana zoom:
+    window = time_serie[x[0]-1:x[1]+1]
+    time_serie_zoom_plot = ax_zoom.plot(window, linewidth=0.5, color='blue'); ax_zoom.set_xlim(1, len(window))
+    canvas_netTraffic = FigureCanvasTkAgg(fig, master=root)
+    canvas_netTraffic.get_tk_widget().pack()
+    
+    labelChooseSampling = tk.Label(root, text="Sampling [s]:")
+    labelChooseSampling.pack()
+    selected_option = tk.StringVar(root)
+    selected_option.set("")
+    options = get_divisors(granularidad_deteccion)
+    dropdownChooseSampling = tk.OptionMenu(root, selected_option, *options)
+    dropdownChooseSampling.pack()
+    
+    labelChooseWindow = tk.Label(root, text="Choose window:")
+    labelChooseWindow.pack()
+    slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=1, length=500, orient=tk.HORIZONTAL)
+    slider.pack()
+    
+    labelChooseThetaSerie = tk.Label(root, text="Choose theta parameter time serie:")
+    labelChooseThetaSerie.pack()
+    spinboxChooseThetaSerie = ttk.Spinbox(root, from_=0, to=n, increment=1)
+    spinboxChooseThetaSerie.set(0)
+    spinboxChooseThetaSerie.pack()
+    
+    fig_theta, ax_theta = plt.subplots()
+    theta_evolution = thetaParams[::1, (initial_display_week-1)*(n+1)+initial_display_coefficient-1]
+    theta_serie_plot = ax_theta.plot()
+    canvas_thetaSerie = FigureCanvasTkAgg(fig_theta, master=root)
+    canvas_thetaSerie.get_tk_widget().pack()
+    
+    GUIobject = GraphicalUserInterface(root = root,
+                                       initial_display_week = initial_display_week,
+                                       )
+    
+    root.mainloop()
+    pass
+
+
+def createGUI(filenameJSON):
+    #Paso 0: obtener los datos de cada semana:
+    JSONobject = getJSONTrendDynamicsData(filenameJSON)
+    all_series = getAllSeriesMatrix(JSONobject)
+    thetaParams = getThetaParamsMatrix(JSONobject)
+    n = JSONobject["n"]
+    Tsventana = JSONobject["Tsventana"]
+    granularidad_deteccion = JSONobject["Scope"]
+    
+    createDefaultGUI(0, 0, all_series, n, Tsventana, granularidad_deteccion, thetaParams)
+    '''
+    #Paso 1: preparar layout vacío inicialmente:
+    root = tk.Tk()
+    root.title("Predictor")
+    root.geometry("1080x800")
     week_was = 0
+    
     #Hacer que el usuario escoja una semana:
     def on_change_WEEKBUTTON():
         nonlocal week_was
@@ -64,8 +152,7 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
             theta_evolution = thetaParams[::sample_period, week*n_coefs+theta_i]
             theta_plot[0].set_data([], [])
             theta_plot[0] = ax_theta.plot(theta_evolution, linewidth=1, color='orange')[0]
-            if contains_nan(theta_evolution) is False:
-                ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
+            #ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
             canvas2.draw() #Para realizar el plot de la serie temporal de theta
             
             week_was = week
@@ -76,8 +163,6 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
     spinbox_WEEK = ttk.Spinbox(root, from_=0, to=all_series.shape[0]-1, increment=1, command=on_change_WEEKBUTTON)
     spinbox_WEEK.set(0)
     spinbox_WEEK.pack()
-    frame = tk.Frame(root)
-    frame.pack(pady=20)
     
     #Por defecto, se muestra la serie temporal para la primera semana:
     time_serie = all_series[0]
@@ -97,7 +182,8 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
     if contains_nan(window) is False:
         ax_zoom.set_ylim(0.8*min(window), 1.2*max(window))
     ax_zoom.grid(True, alpha=0.5)
-    canvas = FigureCanvasTkAgg(fig, master=frame)
+    
+    canvas = FigureCanvasTkAgg(fig, master=root)
     canvas.get_tk_widget().pack()
     
     label = tk.Label(root, text="Sampling [s]:")
@@ -114,8 +200,7 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
         theta_evolution = thetaParams[::sample_period, week*n_coefs+theta_i]
         theta_plot[0].set_data([], [])
         theta_plot[0] = ax_theta.plot(theta_evolution, linewidth=1, color='orange')[0]
-        if contains_nan(theta_evolution) is False:
-            ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
+        #ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
         canvas2.draw() #Para realizar el plot de la serie temporal de theta
     
     options = get_divisors(granularidad_deteccion)
@@ -140,8 +225,7 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
         domain = list(range(selectedWindow,selectedWindow+Tsventana))
         window_plot[0] = ax_zoom.plot(domain, window, linewidth=0.5, color='blue')[0]
         ax_zoom.set_xlim(selectedWindow, selectedWindow+Tsventana-1)
-        if contains_nan(window) is False:
-            ax_zoom.set_ylim(0.8*min(window), 1.2*max(window))
+        #ax_zoom.set_ylim(0.8*min(window), 1.2*max(window))
         canvas.draw()
         
     slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=step_increment, length=500, orient=tk.HORIZONTAL, command=on_change_WINDOWSLIDER)
@@ -160,15 +244,12 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
         theta_evolution = thetaParams[::sample_period, week*n_coefs+theta_i]
         theta_plot[0].set_data([], [])
         theta_plot[0] = ax_theta.plot(theta_evolution, linewidth=1, color='orange')[0]
-        if contains_nan(theta_evolution) is False: #Las series siempre contienen valores nan
-            ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
+        #ax_theta.set_ylim(0.8*min(theta_evolution), 1.2*max(theta_evolution))
         canvas2.draw() #Para realizar el plot de la serie temporal de theta
     
     spinbox_THETAINDEX = ttk.Spinbox(root, from_=0, to=n, increment=1, command=on_change_THETAINDEX)
     spinbox_THETAINDEX.set(0)
     spinbox_THETAINDEX.pack()
-    frame = tk.Frame(root)
-    frame.pack(pady=20)
     
     #Serie temporal de parámetros theta:
     n_coefs = n+1
@@ -188,28 +269,13 @@ def createGUI(filename_network_traffic_series, filename_thetaParams, n, granular
     canvas2.get_tk_widget().pack()
     
     root.mainloop()
+    '''
 
 
 
 
-filename_network_traffic_series = '../Data_extraction/Data_extraction_output/All_series.txt'
-filename_thetaParams = '../Data_extraction/Data_extraction_output/TP30_7.txt'
-n = 7
-
-
-'''
-time_serie = all_series[1]
-
-thetaParams = np.loadtxt(filename_thetaParams, delimiter=',')
-n_coefs = n+1
-n_series = int(thetaParams.shape[1]/n_coefs)
-#n_ventanas = math.ceil(thetaParams.shape[0]/diezmado)
-#theta_series = np.zeros((n_coefs, n_series, n_ventanas))
-'''
-n = int(filename_thetaParams.split("_")[-1][:-4])
-Tsventana = int(filename_thetaParams.split("_")[-2][-2:])*60
-granularidad_deteccion = 180; #[s]
-createGUI(filename_network_traffic_series, filename_thetaParams, n, granularidad_deteccion, Tsventana)
+filenameJSON = '../Data_extraction/Data_extraction_output/trendDynamicsOutput.json'
+createGUI(filenameJSON)
 
 #El resto del código no se ejecuta hasta que se hayan introducido las variables:
 print('Next')
