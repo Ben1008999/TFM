@@ -14,7 +14,7 @@ from matplotlib.widgets import Slider
 import matplotlib
 import math
 import json
-from GUIStyleModule import GraphicalUserInterface
+from GUIStyleModule import GraphicalUserInterface, GUI_Data
 matplotlib.use('Agg')
 
 def getJSONTrendDynamicsData(filenameJSON):
@@ -53,62 +53,114 @@ def contains_nan(lst):
             return True
     return False
 
+def interpolate(array, Ts):
+    result = []
+    for i in range(1, len(array)):
+        adders = []
+        if array[i] == None or array[i-1] == None:
+            for x in range(1, Ts):
+                adders.append(None)
+        else:
+            m = (array[i]-array[i-1])/Ts
+            for x in range(1, Ts):
+                adders.append(array[i-1] + m*x)
+        result = result + [array[i-1]] + adders
+        
+    return result
+
 def createDefaultGUI(initial_display_week, initial_display_coefficient, all_series, n, Tsventana, granularidad_deteccion, thetaParams):
     #Function to initialize GUI:
     root = tk.Tk()
     root.title("Predictor")
     root.geometry("1080x800")
     
+    #Week spinbox:
+    #Functionality: when user changes the week, the plot of network traffic week time series must update:
+    def on_change_WEEKSPINBOX():
+        #Take the chosen current week by user:
+        chosen_week = int(GUIobject.spinBoxWeek.get())
+        #If selected week is different of previous selected week, update plot:
+        if chosen_week != GUIobject.displaying_week_was:
+            time_serie = GUIobject.data.all_series[chosen_week]
+            GUIobject.time_serie_plot[0].set_data([], [])
+            GUIobject.time_serie_plot = ax.plot(time_serie, linewidth=0.1, color='blue')
+            GUIobject.time_serie_plot_canvas.draw()
     labelChooseWeek = tk.Label(root, text="Choose here the week:")
     labelChooseWeek.pack()
-    spinboxChooseWeek = ttk.Spinbox(root, from_=0, to=all_series.shape[0]-1, increment=1)
+    spinboxChooseWeek = ttk.Spinbox(root, from_=0, to=all_series.shape[0]-1, increment=1, command=on_change_WEEKSPINBOX)
     spinboxChooseWeek.set(0)
     spinboxChooseWeek.pack()
     
-    fig, (ax, ax_zoom) = plt.subplots(1, 2, figsize=(10, 5))
     #Plot de la serie temporal inicial:
+    fig, (ax, ax_zoom) = plt.subplots(1, 2, figsize=(10, 5))
     time_serie = all_series[initial_display_week]
     time_serie_plot = ax.plot(time_serie, linewidth=0.1, color='blue')
-    #Plot de los límites de la ventana:
+        #Plot de los límites de la ventana:
     x = [1, 1+Tsventana-1]; y = [0, 150000]
     window_limits_plot = ax.plot(x, y, color='red'); ax.set_xlim(1, len(time_serie)); ax.set_ylim(1, 150000); ax.grid(True, alpha=0.5)
-    #Plot de la ventana zoom:
+        #Plot de la ventana zoom:
     window = time_serie[x[0]-1:x[1]+1]
     time_serie_zoom_plot = ax_zoom.plot(window, linewidth=0.5, color='blue'); ax_zoom.set_xlim(1, len(window))
+    #Canvas del plot:
     canvas_netTraffic = FigureCanvasTkAgg(fig, master=root)
     canvas_netTraffic.get_tk_widget().pack()
     
+    #DropDown Menu for sampling value:
+    #Functionality: when user selects a sampling period, it must update the step of slider and the plot of theta params:
+    def on_change_SAMPLINGDROPDOWN(chosen_sample_period):
+        GUIobject.windowSliderSelector.config(resolution=chosen_sample_period)
+        theta_index = int(GUIobject.spinBoxTheta.get())
+        week = int(GUIobject.spinBoxWeek.get())
+        theta_serie = GUIobject.data.thetaParams[::chosen_sample_period, (week-1)*(GUIobject.data.n+1)+theta_index-1]
+        theta_serie = interpolate(theta_serie, chosen_sample_period)
+        GUIobject.theta_serie_plot[0].set_data([], [])
+        GUIobject.theta_serie_plot = ax_theta.plot(theta_serie, linewidth=1, color='orange')
+        GUIobject.theta_serie_plot_canvas.draw()
     labelChooseSampling = tk.Label(root, text="Sampling [s]:")
     labelChooseSampling.pack()
     selected_option = tk.StringVar(root)
     selected_option.set("")
     options = get_divisors(granularidad_deteccion)
-    dropdownChooseSampling = tk.OptionMenu(root, selected_option, *options)
+    dropdownChooseSampling = tk.OptionMenu(root, selected_option, *options, command=on_change_SAMPLINGDROPDOWN)
     dropdownChooseSampling.pack()
     
+    #Window test slider selector:
     labelChooseWindow = tk.Label(root, text="Choose window:")
     labelChooseWindow.pack()
-    slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=1, length=500, orient=tk.HORIZONTAL)
+    slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=1, length=900, orient=tk.HORIZONTAL)
     slider.pack()
     
+    #Theta serie parameter spinbox:
     labelChooseThetaSerie = tk.Label(root, text="Choose theta parameter time serie:")
     labelChooseThetaSerie.pack()
     spinboxChooseThetaSerie = ttk.Spinbox(root, from_=0, to=n, increment=1)
     spinboxChooseThetaSerie.set(0)
     spinboxChooseThetaSerie.pack()
     
+    #Plot de la serie temporal theta:
     fig_theta, ax_theta = plt.subplots()
     theta_evolution = thetaParams[::1, (initial_display_week-1)*(n+1)+initial_display_coefficient-1]
-    theta_serie_plot = ax_theta.plot()
+    theta_serie_plot = ax_theta.plot(theta_evolution, linewidth=1, color='orange')
     canvas_thetaSerie = FigureCanvasTkAgg(fig_theta, master=root)
     canvas_thetaSerie.get_tk_widget().pack()
     
-    GUIobject = GraphicalUserInterface(root = root,
-                                       initial_display_week = initial_display_week,
-                                       )
+    GUIdata = GUI_Data(network_time_series = all_series,
+                       theta_time_series = thetaParams,
+                       n = n)
     
-    root.mainloop()
-    pass
+    GUIobject = GraphicalUserInterface(root = root,
+                                       data = GUIdata,
+                                       spinBoxWeek = spinboxChooseWeek,
+                                       time_serie_plot = time_serie_plot,
+                                       time_serie_plot_canvas = canvas_netTraffic,
+                                       displaying_week_was=initial_display_week,
+                                       samplingDropDownMenu = dropdownChooseSampling,
+                                       windowSliderSelector = slider,
+                                       spinBoxTheta = spinboxChooseThetaSerie,
+                                       theta_serie_plot = theta_serie_plot,
+                                       theta_serie_plot_canvas = canvas_thetaSerie)
+    
+    return GUIobject
 
 
 def createGUI(filenameJSON):
@@ -119,8 +171,17 @@ def createGUI(filenameJSON):
     n = JSONobject["n"]
     Tsventana = JSONobject["Tsventana"]
     granularidad_deteccion = JSONobject["Scope"]
+    #Paso 1: mostrar la interfaz gráfica default:
+    GUIobject = createDefaultGUI(initial_display_week=0,
+                     initial_display_coefficient=0,
+                     all_series=all_series,
+                     n=n,
+                     Tsventana=Tsventana,
+                     granularidad_deteccion=granularidad_deteccion,
+                     thetaParams=thetaParams)
     
-    createDefaultGUI(0, 0, all_series, n, Tsventana, granularidad_deteccion, thetaParams)
+    
+    GUIobject.root.mainloop()
     '''
     #Paso 1: preparar layout vacío inicialmente:
     root = tk.Tk()
