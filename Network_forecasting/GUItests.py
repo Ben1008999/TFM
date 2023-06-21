@@ -68,6 +68,34 @@ def interpolate(array, Ts):
         
     return result
 
+def map_None_to_nan(element):
+    if element is None:
+        return np.nan
+    return element
+def take_not_nan_values(array):
+    #Convert all NoneType to np.nan:
+    array = list(map(map_None_to_nan, array))
+    array = [element for element in array if math.isnan(element) is False]
+    return [element for element in array if math.isnan(element) is False]
+
+def take_not_nan_indexes(array):
+    index_from = 0
+    index_to = 0
+    #Convert all NoneType to np.nan:
+    array = list(map(map_None_to_nan, array))
+    for i in range(len(array)):
+        e = array[i]
+        if math.isnan(e) is False:
+            index_from = i
+            break
+    for i in range(len(array)-1, -1, -1):
+        e = array[i]
+        if math.isnan(e) is False:
+            index_to = i
+            break
+    
+    return index_from, index_to
+
 def createDefaultGUI(initial_display_week, initial_display_coefficient, all_series, n, Tsventana, granularidad_deteccion, thetaParams):
     #Function to initialize GUI:
     root = tk.Tk()
@@ -79,12 +107,29 @@ def createDefaultGUI(initial_display_week, initial_display_coefficient, all_seri
     def on_change_WEEKSPINBOX():
         #Take the chosen current week by user:
         chosen_week = int(GUIobject.spinBoxWeek.get())
-        #If selected week is different of previous selected week, update plot:
+        #If selected week is different of previous selected week, update plot of time serie and theta-params:
         if chosen_week != GUIobject.displaying_week_was:
             time_serie = GUIobject.data.all_series[chosen_week]
             GUIobject.time_serie_plot[0].set_data([], [])
             GUIobject.time_serie_plot = ax.plot(time_serie, linewidth=0.1, color='blue')
             GUIobject.time_serie_plot_canvas.draw()
+            #Update the theta-params plot:
+            theta_index = int(GUIobject.spinBoxTheta.get())
+            theta_evolution = GUIobject.data.thetaParams[::GUIobject.samplePeriod, chosen_week*(GUIobject.data.n+1)+theta_index]
+            theta_evolution = interpolate(theta_evolution, GUIobject.samplePeriod)
+            GUIobject.theta_serie_plot[0].set_data([], [])
+            GUIobject.theta_serie_plot = ax_theta.plot(theta_evolution, linewidth=1, color='orange')
+            if bool(take_not_nan_values(theta_evolution)):
+                y = [0.999*min(take_not_nan_values(theta_evolution)), 1.001*max(take_not_nan_values(theta_evolution))]
+                ax_theta.set_ylim(y[0], y[1])
+                ax_theta.set_xlim(ax_theta.set_xlim(take_not_nan_indexes(GUIobject.data.thetaParams[::1, chosen_week*(GUIobject.data.n+1)+theta_index])[0], take_not_nan_indexes(GUIobject.data.thetaParams[::1, chosen_week*(GUIobject.data.n+1)+theta_index])[1]))
+            else:
+                y = [0, 1]
+            x = [GUIobject.selectedWindow, GUIobject.selectedWindow]
+            GUIobject.theta_serie_line_delimiter_plot[0].set_data([], [])
+            GUIobject.theta_serie_line_delimiter_plot = ax_theta.plot(x, y, color='red')
+            GUIobject.theta_serie_plot_canvas.draw()
+            GUIobject.displaying_week_was = chosen_week
     labelChooseWeek = tk.Label(root, text="Choose here the week:")
     labelChooseWeek.pack()
     spinboxChooseWeek = ttk.Spinbox(root, from_=0, to=all_series.shape[0]-1, increment=1, command=on_change_WEEKSPINBOX)
@@ -96,8 +141,9 @@ def createDefaultGUI(initial_display_week, initial_display_coefficient, all_seri
     time_serie = all_series[initial_display_week]
     time_serie_plot = ax.plot(time_serie, linewidth=0.1, color='blue')
         #Plot de los límites de la ventana:
-    x = [1, 1+Tsventana-1]; y = [0, 150000]
-    window_limits_plot = ax.plot(x, y, color='red'); ax.set_xlim(1, len(time_serie)); ax.set_ylim(1, 150000); ax.grid(True, alpha=0.5)
+    x = [1, 1+Tsventana-1]; y = [0, max(take_not_nan_values(time_serie))]
+    window_limits_plot = ax.plot(x, y, color='red')
+    ax.set_xlim(1, len(time_serie)); ax.set_ylim(1, 150000); ax.grid(True, alpha=0.5)
         #Plot de la ventana zoom:
     window = time_serie[x[0]-1:x[1]+1]
     time_serie_zoom_plot = ax_zoom.plot(window, linewidth=0.5, color='blue'); ax_zoom.set_xlim(1, len(window))
@@ -109,43 +155,119 @@ def createDefaultGUI(initial_display_week, initial_display_coefficient, all_seri
     #Functionality: when user selects a sampling period, it must update the step of slider and the plot of theta params:
     def on_change_SAMPLINGDROPDOWN(chosen_sample_period):
         GUIobject.windowSliderSelector.config(resolution=chosen_sample_period)
+        GUIobject.samplePeriod=chosen_sample_period
         theta_index = int(GUIobject.spinBoxTheta.get())
         week = int(GUIobject.spinBoxWeek.get())
-        theta_serie = GUIobject.data.thetaParams[::chosen_sample_period, (week-1)*(GUIobject.data.n+1)+theta_index-1]
-        theta_serie = interpolate(theta_serie, chosen_sample_period)
+        theta_evolution = GUIobject.data.thetaParams[::chosen_sample_period, week*(GUIobject.data.n+1)+theta_index]
+        theta_evolution = interpolate(theta_evolution, chosen_sample_period)
         GUIobject.theta_serie_plot[0].set_data([], [])
-        GUIobject.theta_serie_plot = ax_theta.plot(theta_serie, linewidth=1, color='orange')
+        GUIobject.theta_serie_plot = ax_theta.plot(theta_evolution, linewidth=1, color='orange')
+        if bool(take_not_nan_values(theta_evolution)):
+            y = [0.999*min(take_not_nan_values(theta_evolution)), 1.001*max(take_not_nan_values(theta_evolution))]
+            ax_theta.set_ylim(y[0], y[1])
+            ax_theta.set_xlim(take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[0], take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[1])
+        else:
+            y = [0, 1]
+        x = [GUIobject.selectedWindow, GUIobject.selectedWindow]
+        GUIobject.theta_serie_line_delimiter_plot[0].set_data([], [])
+        GUIobject.theta_serie_line_delimiter_plot = ax_theta.plot(x, y, color='red')
         GUIobject.theta_serie_plot_canvas.draw()
     labelChooseSampling = tk.Label(root, text="Sampling [s]:")
     labelChooseSampling.pack()
     selected_option = tk.StringVar(root)
-    selected_option.set("")
+    selected_option.set("1")
     options = get_divisors(granularidad_deteccion)
     dropdownChooseSampling = tk.OptionMenu(root, selected_option, *options, command=on_change_SAMPLINGDROPDOWN)
     dropdownChooseSampling.pack()
     
     #Window test slider selector:
+    #Functionality: when user slides the slider button of test window, it must update the red lines (delimiters of the window), the zoom plot and the last-second line delimiter in theta serie:
+    def on_change_WINDOWSLIDER(selectedWindow):
+        selectedWindow = int(selectedWindow)
+        GUIobject.selectedWindow = selectedWindow
+        time_serie = GUIobject.data.all_series[int(GUIobject.spinBoxWeek.get())]
+        #Update red lines delimiters:
+        x = [selectedWindow, selectedWindow+GUIobject.data.Tsventana-1]
+        y = [0, max(take_not_nan_values(time_serie))]
+        GUIobject.red_lines_delimiters_plot[0].set_data([], [])
+        GUIobject.red_lines_delimiters_plot = ax.plot(x, y, color='red')
+        #Update zoom plot:
+        window = time_serie[selectedWindow-1:selectedWindow-1+GUIobject.data.Tsventana]
+        domain = list(range(selectedWindow,selectedWindow+GUIobject.data.Tsventana))
+        GUIobject.window_zoom_plot[0].set_data([], [])
+        GUIobject.window_zoom_plot = ax_zoom.plot(window, linewidth=0.5, color='blue')
+        ax_zoom.grid(True, alpha=0.5)
+        #Draw:
+        GUIobject.time_serie_plot_canvas.draw()
+        #Get the current theta serie to set the limits of the yline:
+        week = int(GUIobject.spinBoxWeek.get())
+        sample_period = int(GUIobject.samplePeriod)
+        theta_index = int(spinboxChooseThetaSerie.get())
+        theta_evolution = GUIobject.data.thetaParams[::sample_period, week*(GUIobject.data.n+1)+theta_index]
+        if bool(take_not_nan_values(theta_evolution)):
+            y = [0.999*min(take_not_nan_values(theta_evolution)), 1.001*max(take_not_nan_values(theta_evolution))]
+            ax_theta.set_ylim(y[0], y[1])
+            ax_theta.set_xlim(ax_theta.set_xlim(take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[0], take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[1]))
+        else:
+            y = [0, 1]
+        x = [GUIobject.selectedWindow, GUIobject.selectedWindow]
+        GUIobject.theta_serie_line_delimiter_plot[0].set_data([], [])
+        GUIobject.theta_serie_line_delimiter_plot = ax_theta.plot(x, y, color='red')
+        #Draw:
+        GUIobject.theta_serie_plot_canvas.draw()
+        
     labelChooseWindow = tk.Label(root, text="Choose window:")
     labelChooseWindow.pack()
-    slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=1, length=900, orient=tk.HORIZONTAL)
+    slider = tk.Scale(root, from_=1, to=len(time_serie)-(Tsventana-1), resolution=1, length=900, orient=tk.HORIZONTAL, command=on_change_WINDOWSLIDER)
     slider.pack()
     
     #Theta serie parameter spinbox:
+    #Functionality: when user changes the theta index, it must update the theta series plot:
+    def on_change_THETAINDEXSPINBOX():
+        theta_index = int(spinboxChooseThetaSerie.get())
+        if theta_index != GUIobject.displaying_theta_was:
+            week = int(GUIobject.spinBoxWeek.get())
+            sample_period = int(GUIobject.samplePeriod)
+            theta_evolution = GUIobject.data.thetaParams[::sample_period, week*(GUIobject.data.n+1)+theta_index]
+            theta_evolution = interpolate(theta_evolution, GUIobject.samplePeriod)
+            GUIobject.theta_serie_plot[0].set_data([], [])
+            GUIobject.theta_serie_plot = ax_theta.plot(theta_evolution, linewidth=1, color='orange')
+            if bool(take_not_nan_values(theta_evolution)):
+                y = [0.999*min(take_not_nan_values(theta_evolution)), 1.001*max(take_not_nan_values(theta_evolution))]
+                ax_theta.set_ylim(y[0], y[1])
+                ax_theta.set_xlim(ax_theta.set_xlim(take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[0], take_not_nan_indexes(GUIobject.data.thetaParams[::1, week*(GUIobject.data.n+1)+theta_index])[1]))
+            else:
+                y = [0, 1]
+            x = [GUIobject.selectedWindow, GUIobject.selectedWindow]
+            GUIobject.theta_serie_line_delimiter_plot[0].set_data([], [])
+            GUIobject.theta_serie_line_delimiter_plot = ax_theta.plot(x, y, color='red')
+            GUIobject.theta_serie_plot_canvas.draw()
+            GUIobject.displaying_theta_was = theta_index
+        
     labelChooseThetaSerie = tk.Label(root, text="Choose theta parameter time serie:")
     labelChooseThetaSerie.pack()
-    spinboxChooseThetaSerie = ttk.Spinbox(root, from_=0, to=n, increment=1)
+    spinboxChooseThetaSerie = ttk.Spinbox(root, from_=0, to=n, increment=1, command=on_change_THETAINDEXSPINBOX)
     spinboxChooseThetaSerie.set(0)
     spinboxChooseThetaSerie.pack()
     
     #Plot de la serie temporal theta:
     fig_theta, ax_theta = plt.subplots()
-    theta_evolution = thetaParams[::1, (initial_display_week-1)*(n+1)+initial_display_coefficient-1]
+    theta_evolution = thetaParams[::1, initial_display_week*(n+1)+initial_display_coefficient]
     theta_serie_plot = ax_theta.plot(theta_evolution, linewidth=1, color='orange')
+    if bool(take_not_nan_values(theta_evolution)):
+        y = [0.999*min(take_not_nan_values(theta_evolution)), 1.001*max(take_not_nan_values(theta_evolution))]
+        ax_theta.set_ylim(y[0], y[1])
+        ax_theta.set_xlim(take_not_nan_indexes(theta_evolution)[0], take_not_nan_indexes(theta_evolution)[1])
+    else:
+        y = [0, 1]
+    x = [1, 1]
+    theta_delimiter = ax_theta.plot(x, y, color='red')
     canvas_thetaSerie = FigureCanvasTkAgg(fig_theta, master=root)
     canvas_thetaSerie.get_tk_widget().pack()
     
     GUIdata = GUI_Data(network_time_series = all_series,
                        theta_time_series = thetaParams,
+                       Tsventana = Tsventana,
                        n = n)
     
     GUIobject = GraphicalUserInterface(root = root,
@@ -153,11 +275,17 @@ def createDefaultGUI(initial_display_week, initial_display_coefficient, all_seri
                                        spinBoxWeek = spinboxChooseWeek,
                                        time_serie_plot = time_serie_plot,
                                        time_serie_plot_canvas = canvas_netTraffic,
-                                       displaying_week_was=initial_display_week,
+                                       displaying_week_was = initial_display_week,
+                                       displaying_theta_was = initial_display_coefficient,
                                        samplingDropDownMenu = dropdownChooseSampling,
+                                       samplePeriod = 1,
                                        windowSliderSelector = slider,
+                                       selectedWindow = 1,
+                                       red_lines_delimiters_plot = window_limits_plot,
+                                       window_zoom_plot = time_serie_zoom_plot,
                                        spinBoxTheta = spinboxChooseThetaSerie,
                                        theta_serie_plot = theta_serie_plot,
+                                       theta_serie_line_delimiter_plot = theta_delimiter,
                                        theta_serie_plot_canvas = canvas_thetaSerie)
     
     return GUIobject
